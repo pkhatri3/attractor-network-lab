@@ -1,6 +1,0 @@
-import React from "react";
-import Sandbox from "./Sandbox";
-
-export default function App() {
-  return <Sandbox />;
-}
