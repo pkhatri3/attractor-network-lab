@@ -1,0 +1,34 @@
+export function addHexLikeGrid({ graph, cx, cy, rows, cols, spacing, nodeSize, nextId }) {
+  const ids = [];
+  const hexH = (Math.sqrt(3) / 2) * spacing;
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const id = nextId();
+      const x = cx + (c + (r % 2 ? 0.5 : 0)) * spacing - (cols * spacing) / 2;
+      const y = cy + r * hexH - (rows * hexH) / 2;
+      graph.addNode(id, {
+        x,
+        y,
+        size: nodeSize,
+        color: "#48dbfb",
+        label: `Node ${id.split("-")[1]}`,
+      });
+      ids.push(id);
+    }
+  }
+
+  // connect nearby nodes to form the hex pattern
+  for (let i = 0; i < ids.length; i++) {
+    for (let j = i + 1; j < ids.length; j++) {
+      const a = graph.getNodeAttributes(ids[i]);
+      const b = graph.getNodeAttributes(ids[j]);
+      const dx = a.x - b.x;
+      const dy = a.y - b.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < spacing * 1.05) graph.addEdge(ids[i], ids[j], { color: "white" });
+    }
+  }
+
+  return { ids };
+}

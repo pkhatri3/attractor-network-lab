@@ -1,0 +1,36 @@
+export function generateNodes(count) {
+  const nodes = [];
+  for (let i = 0; i < count; i++) {
+    const idx = i+1;
+    nodes.push({
+      id: `n-${idx}`,
+      type: `circle`,
+      position: { x: Math.random() * 400, y: Math.random() * 400 },
+      data: { label: `N${idx}` },
+    });
+  }
+  return nodes;
+}
+
+export function generateEdges(nodes) {
+  const edges = [];
+    for (let i = 0; i < nodes.length - 1; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
+            edges.push({
+                id: `e-${nodes[i].id}-${nodes[j].id}`,
+                source: nodes[i].id,
+                target: nodes[j].id,
+            });
+        }
+    }
+  return edges;
+}
+
+// Example usage in Sandbox.jsx
+// import { generateNodes, generateEdges } from './templates';
+
+// const initialNodes = generateNodes(5); // Generate 5 nodes
+// const initialEdges = generateEdges('star', initialNodes); // Generate edges in a star pattern
+
+// const [nodes, setNodes] = useState(initialNodes);
+// const [edges, setEdges] = useState(initialEdges);

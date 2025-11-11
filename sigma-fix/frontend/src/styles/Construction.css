@@ -1,0 +1,80 @@
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.sandbox-container {
+  width: 100%;
+  height: 100%;
+  background: #0f141a;
+  overflow: hidden;
+  position: relative;
+}
+
+.sandbox-container.mode-draw,
+.sandbox-container.mode-draw canvas {
+  cursor: crosshair !important;
+}
+
+.sandbox-container.mode-delete,
+.sandbox-container.mode-delete canvas {
+  cursor: not-allowed !important;
+}
+
+.sandbox-container:not(.mode-draw):not(.mode-delete),
+.sandbox-container:not(.mode-draw):not(.mode-delete) canvas {
+  cursor: default !important;
+}
+
+button {
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+button:active {
+  transform: scale(0.97);
+}
+
+.tools-menu {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+
+.grid-toggle {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 20;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #eaf4ff;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  backdrop-filter: blur(8px);
+  background: rgba(20,20,26,0.75);
+  font-family: Arial, Helvetica, sans-serif;
+
+}
+
+.grid-toggle.active {
+  background: #1a6fd6;
+}
+
+.go-to-learning-btn {
+  position: absolute;
+  top: 60px;
+  right: 12px;
+  z-index: 20;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: #1a6fd6;
+  color: #eaf4ff;
+  text-decoration: none;
+  cursor: pointer;
+  font-weight: 600;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  backdrop-filter: blur(8px);
+  font-family: Arial, Helvetica, sans-serif;
+}

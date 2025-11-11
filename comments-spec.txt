@@ -1,0 +1,72 @@
+
+2025-10-18 Comments on spec 2.1 (and what a shame that this is the first full draft I get to see.)
+
+1. I see a lot of bullet points. Normally we number everything to facilitate unambiguous 
+referencing in discussion.
+
+2. ATs are okay so far as they go, but possibly don't tell enough. This is a "plan" meaning
+we'd also like to know who is doing these activities, when, and when maybe more crisply how
+anyone would recognize they are concluded successfully. How many of these tests must pass
+in order for us to conclude the project is a success? I guess all of them? We should have
+said a grand aggregate determination.
+
+3. We refer three times to installation but explain nothing about what steps the team might
+take to prepare a package to be installed or how we intend to do it.  This is one of the 
+kinds of cross checks we perform - checking that the terms used in one section are reflected
+the same way in others, or if they are missing altogether.
+
+4. We don't see traceability from cost section to design in order to check whether we agree
+on the complexity estimates. The figures given in #8 are just given, not supported. 
+
+5. The cost estimate ONLY uses FPA, which is fine so far as it goes, but remember FPA does
+not account for ALL time, just time in the construction of a given design. You have other
+kinds of time that will be spent on this. How much is that? We should account for it too.
+
+6. The timeline is a reasonable starting point but doesn't tell me any commitment on what
+you will demo on the lab days 10-23, 10-30, 11-6. We'd like to see sequence of increasing
+levels of functionality - "This week we now have...." - en route to the CDR.  Potentially
+you would have wanted to express this in a Gantt chart in order to track dependencies as
+well.  Remember, the predicted time is not equally divisible by team members. Some tasks
+must precede others and so on. It is not like just clocking hours at a minimum wage job.
+
+7. This seems awfully light on wireframe and piloting illustrations. How do you know you
+are on track to offering a good UX for this task?
+
+8. I see no mentino of design alternatives. Did you ultimately decide that the React env
+was best to use after all? Apparently so. Why?  At a minimum you'd want to preserve this
+sort of material in anticipation of filling in content on the final report (which again 
+I recommend you check out now so there is not a fire drill later in recreating design info.)
+
+9. We talk in a few places about dealing with this at "large scale" which is good, that is
+our intention, but we nowhere say what that means nor how we will test it. The same is true
+of visualiztion. We promise this in dozens of places, but again don't say that much about
+how we will achieve it or control it. Let's be clear: I will interpret absence of further 
+detail about this as a promise that it will meet MY sense of large scale and visualization
+capability satisfactorily. (This will entail potentially tens of thosuands of nodes, with 
+potentially elaborate state charts controlling each in the simulation. It will entail the
+ability to manipulate the viewport to render different perspectives and levels of detail.)
+This will need be smooth to set up, run and visualize. A toy that barely operates on just
+a dozen nodes is a toy and serve as a fail. The risk reduction steps during piloting stage
+we just completed might reasonably have evaluated these performance and vis needs too.
+
+
+Overall it comes across as going in the right direction. I'd like to have polished a few
+more details and filled in small gaps before moving ahead (per my kvetching above) but it
+is close enough to green light in the "low A" range (recognizing that we leave open risks
+unaddressed w.r.t. scale and vis properties.) Looking forward to a big win on this project!
+
+
+
+
+2025-10-03 Comments on productivity though not yet evidenced in a spec draft.
+
+Glad to some activity, though evidence in the notes is scant. I see mention decision about "the" tech stack but ... not what it is. (I bet it is "a" tech stack and potentially will change...) But piloting fast to start getting on same page with customer is key. The first decisions are almost certainly not going to be the last, so don't get heavily invested in them. There will be many ways to think about and visualize these structures, we should not presume we find an effective way the first days in.
+
+I think a tech stack as mentioned above implies infrastructure. What is it? Where is your code base? SVN? (I don't see it.) I hope we are not using resources outside the scope of the assignment and syllabus.
+
+What is the rest of the research community using for this? Are we reinventing wheels? Or improving them?
+
+Do we have pictures illustrating what it looks like when the client is winning value from the tool set? (Answer is "no" of course, since I do not see anything in the repo to this effect.) What driving examples can we create with the customer to focus this activity?
+
+Potentially it is a good risk reduction step to have one or two team members crafting a template proposal so there is already progress once some specifics start to fall into place. Classic mistake is to think linearly, like this is a BS intro course. We need to learn to blend multiple threads of activity.
+

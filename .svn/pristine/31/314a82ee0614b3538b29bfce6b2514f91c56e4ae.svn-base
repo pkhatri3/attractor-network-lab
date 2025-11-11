@@ -1,0 +1,28 @@
+import React, { createContext, useState } from "react";
+
+export const LearningContext = createContext();
+
+export function LearningProvider({ children }) {
+  const [memories, setMemories] = useState(null);
+  const [rule, setRule] = useState("standard");
+  const [WHist, setWHist] = useState(null);
+  const [learningComplete, setLearningComplete] = useState(false);
+  
+  const [capacityTestActive, setCapacityTestActive] = useState(false);
+  const [capacityNoiseLevel, setCapacityNoiseLevel] = useState(0.2);
+  const [capacityResults, setCapacityResults] = useState(null);
+
+  return (
+    <LearningContext.Provider value={{
+      memories, setMemories,
+      rule, setRule,
+      WHist, setWHist,
+      learningComplete, setLearningComplete,
+      capacityTestActive, setCapacityTestActive,
+      capacityNoiseLevel, setCapacityNoiseLevel,
+      capacityResults, setCapacityResults
+    }}>
+      {children}
+    </LearningContext.Provider>
+  );
+}

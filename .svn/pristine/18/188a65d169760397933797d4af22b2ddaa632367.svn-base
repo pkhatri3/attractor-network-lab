@@ -1,0 +1,697 @@
+import React, { useEffect, useRef, useState } from "react";
+import Sigma from "sigma";
+import Graph from "graphology";
+
+
+const API = "http://localhost:8001";
+
+export default function Sandbox() {
+  const containerRef = useRef(null);
+  const gridCanvasRef = useRef(null);
+  const graphRef = useRef(new Graph({ type: "undirected" }));
+  const sigmaRef = useRef(null);
+  const firstNodeRef = useRef(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [mode, setMode] = useState("idle"); 
+  const modeRef = useRef("idle");
+  const simRunningRef = useRef(false);
+  const simTimerRef = useRef(null);
+  const [simRunning, setSimRunning] = useState(false);
+  const [memoriesText, setMemoriesText] = useState("[[1,1,1,1],[1,1,-1,1]]");
+  const [ainitText, setAinitText] = useState("[-1,1,1,1]");
+  const [AHist, setAHist] = useState([]);   
+  const [EHist, setEHist] = useState([]);   
+  const [frame, setFrame] = useState(0);
+  const [W, setW] = useState(null);
+
+  const [showResize, setShowResize] = useState(false);
+  useEffect(() => { modeRef.current = mode; }, [mode]);
+  const [gridMode, setGridMode] = useState(false);
+  const gridRef = useRef(false);
+  useEffect(() => { gridRef.current = gridMode; }, [gridMode]);
+  const [nodeSizePreset, setNodeSizePreset] = useState("medium"); 
+  const nodeSizeRef = useRef(5);
+  useEffect(() => {
+    nodeSizeRef.current = nodeSizePreset === "small" ? 4 : nodeSizePreset === "large" ? 8 : 5;
+  }, [nodeSizePreset]);
+  const [hopfieldCount, setHopfieldCount] = useState("4");
+  const hopfieldCountRef = useRef("4");
+  useEffect(() => { hopfieldCountRef.current = hopfieldCount; }, [hopfieldCount]);
+  const nodeIdRef = useRef(0);
+  const [cluster, setCluster] = useState(null); 
+  
+  const [resizing, setResizing] = useState(false);
+  const [handlePos, setHandlePos] = useState({ x: 0, y: 0 }); 
+  useEffect(() => {
+    const container = containerRef.current;
+    const graph = graphRef.current;
+    if (!container) return;
+    const sigmaInstance = new Sigma(graph, container, {
+      renderLabels: false,
+      allowInvalidContainer: true,
+      settings: { mouseEnabled: true, enableCamera: true },
+    });
+    sigmaRef.current = sigmaInstance;
+    let draggedNode = null;
+    sigmaInstance.on("downNode", ({ node }) => {
+      draggedNode = node;
+      const color = firstNodeRef.current === node ? "orange" : "#38a8c2ff";
+      graph.setNodeAttribute(node, "color", color);
+      sigmaInstance.getCamera().disable();
+      sigmaInstance.refresh();
+    });
+    sigmaInstance.on("upNode", () => {
+      if (draggedNode) {
+        const color = firstNodeRef.current === draggedNode ? "orange" : "#48dbfb";
+        graph.setNodeAttribute(draggedNode, "color", color);
+        draggedNode = null;
+        sigmaInstance.refresh();
+      }
+      sigmaInstance.getCamera().enable();
+    });
+    sigmaInstance.getMouseCaptor().on("mousemove", (e) => {
+      if (!draggedNode) return;
+      const pos = sigmaInstance.viewportToGraph(e);
+      const ratio = sigmaInstance.getCamera().getState().ratio;
+      const step = 25 / Math.max(ratio, 1e-6);
+      const useGrid = gridRef.current;
+      const x = useGrid ? Math.round(pos.x / step) * step : pos.x;
+      const y = useGrid ? Math.round(pos.y / step) * step : pos.y;
+      graph.setNodeAttribute(draggedNode, "x", x);
+      graph.setNodeAttribute(draggedNode, "y", y);
+      sigmaInstance.refresh();
+    });
+    sigmaInstance.on("clickNode", ({ node }) => {
+      if (modeRef.current === "delete") {
+        if (graph.hasNode(node)) graph.dropNode(node);
+        sigmaInstance.refresh();
+        return; 
+      }
+      if (!firstNodeRef.current) {
+        firstNodeRef.current = node;
+        graph.setNodeAttribute(node, "color", "orange");
+      } else if (firstNodeRef.current === node) {
+        graph.setNodeAttribute(node, "color", "#48dbfb");
+        firstNodeRef.current = null;
+      } else {
+        if (!graph.hasEdge(firstNodeRef.current, node)) {
+          graph.addEdge(firstNodeRef.current, node, { color: "white" });
+        } else {
+          graph.dropEdge(firstNodeRef.current, node);
+        }
+        graph.setNodeAttribute(firstNodeRef.current, "color", "#48dbfb");
+        firstNodeRef.current = null;
+      }
+      sigmaInstance.refresh();
+    });
+    const handleCanvasClick = (e) => {
+      const pos = sigmaInstance.viewportToGraph(e);
+      const currentMode = modeRef.current;
+      if (currentMode === "add") {
+        const ratio = sigmaInstance.getCamera().getState().ratio;
+        const step = 25 / Math.max(ratio, 1e-6);
+        const useGrid = gridRef.current;
+        const x = useGrid ? Math.round(pos.x / step) * step : pos.x;
+        const y = useGrid ? Math.round(pos.y / step) * step : pos.y;
+        nodeIdRef.current += 1;
+        const id = `n-${nodeIdRef.current}`;
+        graph.addNode(id, { x, y, size: nodeSizeRef.current, color: "#48dbfb", label: id });
+        sigmaInstance.refresh();
+        return; 
+      }
+      if (currentMode === "hopfield") {
+        const n = Math.max(
+          2,
+          parseInt((hopfieldCountRef.current && hopfieldCountRef.current.trim()) || "4", 10)
+        );
+        const ratio = sigmaInstance.getCamera().getState().ratio;
+        const step = 25 / Math.max(ratio, 1e-6);
+        const useGrid = gridRef.current;
+        const centerX = useGrid ? Math.round(pos.x / step) * step : pos.x;
+        const centerY = useGrid ? Math.round(pos.y / step) * step : pos.y;
+
+        const nodes = [];
+        const radius = 120 / ratio;
+        const offsetAngle = -Math.PI / 2;
+        for (let i = 0; i < n; i++) {
+          const angle = (2 * Math.PI * i) / n + offsetAngle;
+          const x = centerX + radius * Math.cos(angle);
+          const y = centerY + radius * Math.sin(angle);
+          nodeIdRef.current += 1;
+          const id = `n-${nodeIdRef.current}`;
+          graph.addNode(id, { x, y, size: nodeSizeRef.current, color: "#48dbfb", label: id });
+          nodes.push(id);
+        }
+        for (let i = 0; i < nodes.length; i++) {
+          for (let j = i + 1; j < nodes.length; j++) {
+            graph.addEdge(nodes[i], nodes[j], { color: "white" });
+          }
+        }
+        setCluster({ ids: nodes, center: { x: centerX, y: centerY }, radius });
+        setShowResize(true);
+        sigmaInstance.refresh();
+        setMode("idle"); 
+        return;
+      }
+    };
+    sigmaInstance.getMouseCaptor().on("click", handleCanvasClick);
+
+    return () => {
+      sigmaInstance.kill();
+    };
+  }, []);
+  useEffect(() => {
+    if (!cluster || !sigmaRef.current) return;
+    const update = () => {
+      const p = sigmaRef.current.graphToViewport({
+        x: cluster.center.x + cluster.radius,
+        y: cluster.center.y,
+      });
+      if (p && typeof p.x === "number") setHandlePos({ x: p.x, y: p.y });
+    };
+    update();
+    const cam = sigmaRef.current.getCamera();
+    cam.on("updated", update);
+    return () => cam.off("updated", update);
+  }, [cluster]);
+
+  useEffect(() => {
+    if (!resizing || !cluster || !sigmaRef.current) return;
+
+    const onMove = (e) => {
+      const rect = containerRef.current.getBoundingClientRect();
+      const vp = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      const gpos = sigmaRef.current.viewportToGraph(vp);
+
+      const dx = gpos.x - cluster.center.x;
+      const dy = gpos.y - cluster.center.y;
+      const r = Math.max(10, Math.sqrt(dx * dx + dy * dy));
+
+      const graph = graphRef.current;
+      const n = cluster.ids.length;
+      const offsetAngle = -Math.PI / 2;
+      for (let i = 0; i < n; i++) {
+        const angle = (2 * Math.PI * i) / n + offsetAngle;
+        const x = cluster.center.x + r * Math.cos(angle);
+        const y = cluster.center.y + r * Math.sin(angle);
+        const id = cluster.ids[i];
+        if (graph.hasNode(id)) {
+          graph.setNodeAttribute(id, "x", x);
+          graph.setNodeAttribute(id, "y", y);
+        }
+      }
+      setCluster({ ...cluster, radius: r });
+      sigmaRef.current.refresh();
+
+      const vpNew = sigmaRef.current.graphToViewport({
+        x: cluster.center.x + r,
+        y: cluster.center.y,
+      });
+      if (vpNew && typeof vpNew.x === "number") setHandlePos({ x: vpNew.x, y: vpNew.y });
+    };
+
+    const onUp = () => setResizing(false);
+
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, [resizing, cluster]);
+  useEffect(() => {
+    if (!sigmaRef.current) return;
+    const canvas = gridCanvasRef.current;
+    const draw = () => {
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      const dpr = window.devicePixelRatio || 1;
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      canvas.style.width = width + "px";
+      canvas.style.height = height + "px";
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, width, height);
+      if (!gridRef.current) return;
+      const sigma = sigmaRef.current;
+      const spacingPx = 25;
+      const originVp = sigma.graphToViewport({ x: 0, y: 0 });
+      const offsetX = ((originVp.x % spacingPx) + spacingPx) % spacingPx;
+      const offsetY = ((originVp.y % spacingPx) + spacingPx) % spacingPx;
+
+      ctx.strokeStyle = "rgba(255,255,255,0.08)";
+      ctx.lineWidth = 1;
+
+      for (let x = offsetX; x <= width; x += spacingPx) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height);
+        ctx.stroke();
+      }
+      for (let y = offsetY; y <= height; y += spacingPx) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+      }
+    };
+    const cam = sigmaRef.current.getCamera();
+    cam.on("updated", draw);
+    window.addEventListener("resize", draw);
+    draw();
+
+    return () => {
+      cam.off("updated", draw);
+      window.removeEventListener("resize", draw);
+    };
+  }, []);
+  useEffect(() => {
+    if (!sigmaRef.current) return;
+    const canvas = gridCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    const dpr = window.devicePixelRatio || 1;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    canvas.style.width = width + "px";
+    canvas.style.height = height + "px";
+    canvas.width = Math.floor(width * dpr);
+    canvas.height = Math.floor(height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, width, height);
+
+    if (!gridRef.current) return;
+    const sigma = sigmaRef.current;
+    const spacingPx = 25;
+    const originVp = sigma.graphToViewport({ x: 0, y: 0 });
+    const offsetX = ((originVp.x % spacingPx) + spacingPx) % spacingPx;
+    const offsetY = ((originVp.y % spacingPx) + spacingPx) % spacingPx;
+    ctx.strokeStyle = "rgba(255,255,255,0.08)";
+    ctx.lineWidth = 1;
+    for (let x = offsetX; x <= width; x += spacingPx) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, height);
+      ctx.stroke();
+    }
+    for (let y = offsetY; y <= height; y += spacingPx) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(width, y);
+      ctx.stroke();
+    }
+  }, [gridMode]);
+  const clearAll = () => {
+    const graph = graphRef.current;
+    graph.clear();
+    nodeIdRef.current = 0;
+    firstNodeRef.current = null;
+    setCluster(null);
+    setShowResize(false);
+    sigmaRef.current?.refresh();
+  };
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    if (mode === "add" || mode === "hopfield") el.style.cursor = "crosshair";
+    else if (mode === "delete") el.style.cursor = "not-allowed";
+    else el.style.cursor = "default";
+  }, [mode]);
+  function paintActivations(stateArray) {
+  
+    if (!cluster || !sigmaRef.current || !stateArray) return;
+    const graph = graphRef.current;
+    const ids = cluster.ids || [];
+    const n = Math.min(ids.length, stateArray.length);
+
+    for (let i = 0; i < n; i++) {
+      const id = ids[i];
+      if (graph.hasNode(id)) {
+        const v = stateArray[i];
+      
+        graph.setNodeAttribute(id, "color", v === 1 ? "#a7f3d0" : "#fecaca");
+    }
+    } 
+    sigmaRef.current.refresh();
+  }
+  async function handleLearn() {
+  try {
+    const memories = JSON.parse(memoriesText);
+    if (!Array.isArray(memories) || memories.length === 0) {
+      alert("Memories must be a non-empty list of patterns.");
+      return;
+    }
+    const N = memories[0].length;
+    if (!cluster || !cluster.ids || cluster.ids.length !== N) {
+      alert(`Your Hopfield cluster has ${cluster?.ids?.length ?? 0} nodes, but memories are length ${N}. Create a cluster with N=${N} first.`);
+      return;
+    }
+
+    const res = await fetch(`${API}/learn`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ memories })
+    }).then(r => r.json());
+
+    if (!res.ok) {
+      console.error(res);
+      alert(res.error || "Learn failed");
+      return;
+    }
+    setW(res.W || null); 
+    console.log("learn ok:", res.ok, "N:", res.N, "M:", res.M, "W?", !!res.W);
+
+    // Reset any previous playback
+    setAHist([]);
+    setEHist([]);
+    setFrame(0);
+    
+    paintActivations(new Array(N).fill(1)); 
+  } catch (e) {
+    console.error(e);
+    alert("Invalid JSON for memories.");
+  }
+}
+
+async function handleSimulate() {
+  try {
+    const ainit = JSON.parse(ainitText);
+    if (!Array.isArray(ainit) || ainit.length === 0) {
+      alert("Ainit must be a non-empty pattern array.");
+      return;
+    }
+    if (!cluster || !cluster.ids || cluster.ids.length !== ainit.length) {
+      alert(`Ainit length is ${ainit.length} but current cluster has ${cluster?.ids?.length ?? 0} nodes.`);
+      return;
+    }
+
+    const res = await fetch(`${API}/simulate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ainit, t_MAX: 40, granularity: "neuron" })
+    }).then(r => r.json());
+
+
+    if (!res.ok) {
+      console.error(res);
+      alert(res.error || "Simulate failed");
+      return;
+    }
+
+    setAHist(res.A_hist || []);
+    setEHist(res.E_hist || []);
+    setFrame(0);
+
+    
+    if (res.A_hist && res.A_hist.length > 0) {
+      paintActivations(res.A_hist[0]);
+    }
+
+    
+    if (simTimerRef.current) clearInterval(simTimerRef.current);
+    simTimerRef.current = setInterval(() => {
+      setFrame((f) => {
+        const nf = f + 1;
+        const last = (res.A_hist?.length ?? 1) - 1;
+        const idx = Math.min(nf, last);
+        if (res.A_hist && res.A_hist[idx]) paintActivations(res.A_hist[idx]);
+        if (nf >= last) {
+          clearInterval(simTimerRef.current);
+        }
+        return nf;
+      });
+    }, 400);
+  } catch (e) {
+    console.error(e);
+    alert("Invalid JSON for Ainit.");
+  }
+}
+function MatrixGrid({ data, title, cellSize = 18 }) {
+  if (!data || !data.length) return null;
+  const rows = data.length;
+  const cols = Array.isArray(data[0]) ? data[0].length : 0;
+  return (
+    <div style={{
+      background: "rgba(20,20,26,0.92)",
+      border: "1px solid rgba(255,255,255,0.1)",
+      borderRadius: 12,
+      padding: 10,
+      color: "#eaf4ff",
+      boxShadow: "0 10px 30px rgba(0,0,0,0.45)",
+    }}>
+      {title && <div style={{ fontWeight: 700, marginBottom: 8 }}>{title}</div>}
+      <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, ${cellSize}px)`, gap: 2 }}>
+        {data.flatMap((row, i) =>
+          row.map((v, j) => {
+            
+            const norm = Math.max(0, Math.min(1, (v + 1) / 2));
+            return (
+              <div key={`${i}-${j}`} title={`(${i},${j})=${v}`}
+                   style={{
+                     width: cellSize, height: cellSize,
+                     background: `rgba(30,144,255, ${norm})`,
+                     border: "1px solid rgba(255,255,255,0.08)", borderRadius: 4
+                   }}/>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+
+function transpose(arr2d) {
+  if (!arr2d || !arr2d.length) return [];
+  const rows = arr2d.length, cols = arr2d[0].length;
+  const T = Array.from({ length: cols }, () => Array(rows));
+  for (let i = 0; i < rows; i++) for (let j = 0; j < cols; j++) T[j][i] = arr2d[i][j];
+  return T;
+}
+
+
+  
+
+  return (
+    <>
+      <button
+        onClick={() => setMenuOpen((o) => !o)}
+        aria-label="Open tools menu"
+        style={{
+          position: "absolute", top: 12, left: 12, zIndex: 20,
+          width: 44, height: 44, borderRadius: 12,
+          border: "1px solid rgba(255,255,255,0.12)",
+          background: "rgba(20,20,26,0.75)", color: "#eaf4ff",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          cursor: "pointer", boxShadow: "0 8px 24px rgba(0,0,0,0.35)", backdropFilter: "blur(8px)"
+        }}
+      >
+        <div style={{ width: 20 }}>
+          <div style={{ height: 2, background: "#eaf4ff", margin: "3px 0", opacity: 0.9 }} />
+          <div style={{ height: 2, background: "#eaf4ff", margin: "3px 0", opacity: 0.9 }} />
+          <div style={{ height: 2, background: "#eaf4ff", margin: "3px 0", opacity: 0.9 }} />
+        </div>
+      </button>
+      <button
+        onClick={() => setGridMode((g) => !g)}
+        aria-pressed={gridMode}
+        style={{
+          position: "absolute", top: 12, right: 12, zIndex: 20,
+          padding: "10px 12px", borderRadius: 12,
+          border: "1px solid rgba(255,255,255,0.12)",
+          background: gridMode ? "#1a6fd6" : "rgba(20,20,26,0.75)",
+          color: "#eaf4ff", cursor: "pointer",
+          boxShadow: "0 8px 24px rgba(0,0,0,0.35)", backdropFilter: "blur(8px)"
+        }}
+      >
+        {gridMode ? "Switch to freeform" : "Switch to grid"}
+      </button>
+      <button
+        onClick={handleSimulate}
+        style={{
+          position: "absolute", top: 60, right: 12, zIndex: 20,
+          padding: "10px 12px", borderRadius: 12,
+          border: "1px solid rgba(255,255,255,0.12)",
+          background: "rgba(20,20,26,0.75)", color: "#eaf4ff",
+          cursor: "pointer", boxShadow: "0 8px 24px rgba(0,0,0,0.35)", backdropFilter: "blur(8px)"
+        }}
+      >
+        Run Simulation
+      </button>
+
+
+      {menuOpen && (
+        <div
+          style={{
+            position: "absolute", top: 64, left: 12, zIndex: 19, width: 300,
+            padding: 12, borderRadius: 16, background: "rgba(20,20,26,0.92)",
+            border: "1px solid rgba(255,255,255,0.1)", color: "#eaf4ff",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.45)", backdropFilter: "blur(10px)",
+          }}
+        >
+          <div style={{ fontWeight: 700, marginBottom: 8 }}>Graph Tools</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 12, opacity: 0.8, width: 72 }}>Node size</span>
+              <div style={{ display: "flex", gap: 6 }}>
+                <button
+                  onClick={() => setNodeSizePreset("small")}
+                  aria-pressed={nodeSizePreset === "small"}
+                  style={{
+                    padding: "6px 10px",
+                    borderRadius: 8,
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    background: nodeSizePreset === "small" ? "#1a6fd6" : "rgba(255,255,255,0.06)",
+                    color: "#eaf4ff",
+                    cursor: "pointer",
+                  }}
+                >Small</button>
+                <button
+                  onClick={() => setNodeSizePreset("medium")}
+                  aria-pressed={nodeSizePreset === "medium"}
+                  style={{
+                    padding: "6px 10px",
+                    borderRadius: 8,
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    background: nodeSizePreset === "medium" ? "#1a6fd6" : "rgba(255,255,255,0.06)",
+                    color: "#eaf4ff",
+                    cursor: "pointer",
+                  }}
+                >Medium</button>
+                <button
+                  onClick={() => setNodeSizePreset("large")}
+                  aria-pressed={nodeSizePreset === "large"}
+                  style={{
+                    padding: "6px 10px",
+                    borderRadius: 8,
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    background: nodeSizePreset === "large" ? "#1a6fd6" : "rgba(255,255,255,0.06)",
+                    color: "#eaf4ff",
+                    cursor: "pointer",
+                  }}
+                >Large</button>
+              </div>
+            </div>
+            <button
+              onClick={() => setMode(mode === "add" ? "idle" : "add")}
+              aria-pressed={mode === "add"}
+              style={{
+                padding: "10px 12px", borderRadius: 10,
+                border: "1px solid rgba(255,255,255,0.12)",
+                background: mode === "add" ? "#1a6fd6" : "rgba(255,255,255,0.06)",
+                color: "#eaf4ff", cursor: "pointer", textAlign: "left",
+              }}
+            >Add Node (A)</button>
+            <button
+              onClick={() => setMode(mode === "delete" ? "idle" : "delete")}
+              aria-pressed={mode === "delete"}
+              style={{
+                padding: "10px 12px", borderRadius: 10,
+                border: "1px solid rgba(255,255,255,0.12)",
+                background: mode === "delete" ? "#1a6fd6" : "rgba(255,255,255,0.06)",
+                color: "#eaf4ff", cursor: "pointer", textAlign: "left",
+              }}
+            > Delete (D)</button>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <button
+                onClick={() => setMode(mode === "hopfield" ? "idle" : "hopfield")}
+                aria-pressed={mode === "hopfield"}
+                style={{
+                  padding: "10px 12px", borderRadius: 10,
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  background: mode === "hopfield" ? "#1a6fd6" : "rgba(255,255,255,0.06)",
+                  color: "#eaf4ff", cursor: "pointer", textAlign: "left",
+                }}
+              >Hopfield (H)</button>
+              <input
+                type="number"
+                min={2}
+                value={hopfieldCount}
+                onFocus={(e) => e.target.select()}
+                onClick={(e) => e.currentTarget.select()}
+                onChange={(e) => setHopfieldCount(e.target.value.replace(/[^0-9]/g, ""))}
+                style={{ width: 80, padding: "8px 10px", borderRadius: 10 }}
+              />
+            </div>
+            {/* Put this ABOVE your "Clear All (C)" button in the tools panel */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
+                <div style={{ fontSize: 12, opacity: 0.9 }}>Memories (JSON):</div>
+                <textarea
+                  value={memoriesText}
+                  onChange={(e) => setMemoriesText(e.target.value)}
+                  rows={3}
+                  style={{
+                    width: "100%", padding: 8, borderRadius: 10,
+                    background: "rgba(255,255,255,0.06)", color: "#eaf4ff",
+                    border: "1px solid rgba(255,255,255,0.12)"
+                  }}
+                />
+                <button
+                  onClick={handleLearn}
+                  style={{
+                    padding: "8px 10px", borderRadius: 10,
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    background: "#1a6fd6", color: "#eaf4ff", cursor: "pointer",
+                  }}
+                >Learn</button>
+
+                <div style={{ fontSize: 12, opacity: 0.9, marginTop: 8 }}>Ainit (JSON):</div>
+                <input
+                  value={ainitText}
+                  onChange={(e) => setAinitText(e.target.value)}
+                  style={{
+                    width: "100%", padding: 8, borderRadius: 10,
+                    background: "rgba(255,255,255,0.06)", color: "#eaf4ff",
+                    border: "1px solid rgba(255,255,255,0.12)"
+                  }}
+                />
+              </div>
+
+            <button
+              onClick={clearAll}
+              style={{
+                padding: "10px 12px", borderRadius: 10,
+                border: "1px solid rgba(255,255,255,0.12)",
+                background: "rgba(255,255,255,0.06)",
+                color: "#eaf4ff", cursor: "pointer", textAlign: "left",
+              }}
+            >Clear All (C)</button>
+            
+          </div>
+        </div>
+      )}
+      
+      <div
+        ref={containerRef}
+        style={{ width: "100vw", height: "100vh", background: "#0f141a" }}
+      />
+      <canvas
+        ref={gridCanvasRef}
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100vw",
+          height: "100vh",
+          zIndex: 5,
+          pointerEvents: "none",
+          display: gridMode ? "block" : "none",
+        }}
+      />
+      
+      {W && (
+        <div style={{ position: "absolute", left: 12, bottom: 12, zIndex: 50, pointerEvents: "auto" }}>
+          <MatrixGrid data={W} title="Weight Matrix W" />
+        </div>
+      )}
+
+      
+      {AHist.length > 0 && (
+        <div style={{ position: "absolute", right: 12, bottom: 12, zIndex: 50, pointerEvents: "auto" }}>
+          <MatrixGrid data={transpose(AHist)} title="Activations (rows=neurons, cols=t)" />
+        </div>
+      )}
+
+    </>
+  );
+}

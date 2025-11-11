@@ -1,0 +1,13 @@
+import React, { createContext, useState } from "react";
+
+export const GraphContext = createContext();
+
+export function GraphProvider({ children }) {
+  const [network, setNetwork] = useState(null);
+
+  return (
+    <GraphContext.Provider value={{ network, setNetwork }}>
+      {children}
+    </GraphContext.Provider>
+  );
+}

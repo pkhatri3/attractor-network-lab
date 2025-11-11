@@ -1,0 +1,781 @@
+import React, { useState, useContext, useEffect } from "react";
+import { GraphContext } from "../GraphContext";
+import { LearningContext } from "../LearningContext";
+import { Link } from "react-router-dom";
+import LayoutPicker from "../components/LayoutPicker";
+import MemoryImporter from "../components/MemoryImporter";
+import LearningColorSchemePicker from "../components/LearningColorSchemePicker";
+import LearningLegendBar from "../components/LearningLegendBar";
+import { getColormap, getTextColorForBackground, sampleCssGradient } from "../components/Learningcolormaps";
+import { encodeMatrixToBase64 } from "../utils/ioUtils";
+
+
+
+window.__API_URL__ = import.meta.env.VITE_API_URL;
+const API_URL = import.meta.env.VITE_API_URL;
+
+export default function LearningPhase() {
+  const { network } = useContext(GraphContext);
+  const {
+    WHist,
+    setWHist,
+    memories,
+    setMemories,
+    rule,
+    setRule,
+    learningRate,
+    setLearningRate,
+    scale,
+    setScale,
+    layoutChoice,
+    setLayoutChoice,
+    memList,
+    setMemList,
+    learningComplete,
+    setLearningComplete,
+    markLearningRun,
+    learningColorScheme,
+    setLearningColorScheme,
+    setNetworkId,
+  } = useContext(LearningContext);
+
+  const [currentStep, setCurrentStep] = useState(0);
+  const [error, setError] = useState(null);
+  const [pickerKey, setPickerKey] = useState(0);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [range, setRange] = useState({ min: NaN, max: NaN });
+  const [randomCount, setRandomCount] = useState(1);
+
+  useEffect(() => {
+    if (WHist && WHist.length > 0) {
+      const last = WHist.length - 1;
+      setCurrentStep(prev => (prev === last ? prev : last));
+    }
+  }, [WHist]);
+
+  function parseMemoriesSafe(str) {
+    try {
+      const p = JSON.parse(str);
+      return Array.isArray(p) ? p : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function WeightsCanvas({
+    matrix,
+    size = 500,
+    scaleFactor = 2,
+    colorMapName = "blueWhiteRed",
+    onComputedRange,
+  }) {
+    const canvasRef = React.useRef();
+    const backRef = React.useRef();
+    const [showNumbers, setShowNumbers] = React.useState(true);
+
+    React.useEffect(() => {
+      if (!matrix || !matrix.length || !matrix[0].length) return;
+
+      const rows = matrix.length;
+      const cols = matrix[0].length;
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext("2d");
+      const back = backRef.current || (backRef.current = document.createElement("canvas"));
+      const bctx = back.getContext("2d");
+      const dpr = window.devicePixelRatio || 1;
+      ctx.imageSmoothingEnabled = false;
+      bctx.imageSmoothingEnabled = false;
+      const dispW = size;
+      const dispH = size;
+      const sf = Math.max(1, scaleFactor || 1);
+
+      const outW = Math.floor(dispW * sf);
+      const outH = Math.floor(dispH * sf);
+
+      canvas.width  = Math.floor(dispW * sf * dpr);
+      canvas.height = Math.floor(dispH * sf * dpr);
+      canvas.style.width = `${dispW}px`;
+      canvas.style.height = `${dispH}px`;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); 
+      back.width  = outW;
+      back.height = outH;
+      
+      
+      
+      bctx.clearRect(0, 0, outW, outH);
+
+      ctx.clearRect(0, 0, outW, outH);
+
+      // ---- compute min / max (sample if very large) ----
+      let min = Infinity, max = -Infinity;
+      const total = rows * cols;
+      if (total <= 200_000) {
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const v = matrix[r][c];
+            if (v < min) min = v;
+            if (v > max) max = v;
+          }
+        }
+      } else {
+        const samples = Math.min(100_000, total);
+        for (let i = 0; i < samples; i++) {
+          const r = (i * 9301 + 49297) % rows;
+          const c = (i * 23333 + 777) % cols;
+          const v = matrix[r][c];
+          if (v < min) min = v;
+          if (v > max) max = v;
+        }
+        if (!isFinite(min) || !isFinite(max)) { min = -1; max = 1; }
+      }
+
+      // report to parent for the legend
+      if (onComputedRange) {
+        onComputedRange(prev => {
+          if (prev && prev.min === min && prev.max === max) return prev; // no change → no re-render
+          return { min, max };
+        });
+      }
+
+      // ---- colormap lookup ----
+      const cmap = getColormap(colorMapName);
+      const lut = cmap.lut;
+      const center = cmap.isDiverging ? (cmap.center ?? 0) : null;
+      const maxAbs = cmap.isDiverging
+        ? Math.max(Math.abs(min - (center ?? 0)), Math.abs(max - (center ?? 0)), 1e-9)
+        : null;
+
+      function mapColor(v) {
+        let t;
+        if (cmap.isDiverging) {
+          // center -> 0.5
+          t = ((v - (center ?? 0)) / (2 * maxAbs)) + 0.5;
+        } else {
+          t = (v - min) / Math.max(1e-9, (max - min));
+        }
+        if (!isFinite(t)) t = 0.5;
+        t = Math.min(1, Math.max(0, t));
+        const idx = Math.min(lut.length - 1, Math.max(0, Math.round(t * (lut.length - 1))));
+        return lut[idx];
+      }
+
+      // ---- draw pixels ----
+      const img = bctx.createImageData(outW, outH);
+      const data = img.data;
+      let p = 0;
+      for (let y = 0; y < outH; y++) {
+        const rIdx = Math.floor((y * rows) / outH);
+        const row = matrix[rIdx];
+        for (let x = 0; x < outW; x++) {
+          const cIdx = Math.floor((x * cols) / outW);
+          const v = row[cIdx];
+          const [R, G, B] = mapColor(v);
+          data[p++] = R; data[p++] = G; data[p++] = B; data[p++] = 255;
+        }
+      }
+      bctx.putImageData(img, 0, 0);
+
+      // ---- optional light grid for small matrices ----
+      const cellW_px = outW / cols;
+      const cellH_px = outH / rows;
+      if (rows <= 100 && cols <= 100 && cellW_px >= 12 && cellH_px >= 12) {
+        const snap = (v) => Math.round(v);
+        bctx.save();
+        bctx.strokeStyle = "rgba(0,0,0,0.35)";
+        bctx.lineWidth = 1;
+        bctx.beginPath();
+        for (let r = 1; r < rows; r++) {
+          const y = snap(r * cellH_px);
+          bctx.moveTo(0, y);
+          bctx.lineTo(outW, y);
+        }
+        for (let c = 1; c < cols; c++) {
+          const x = snap(c * cellW_px);
+          bctx.moveTo(x, 0);
+          bctx.lineTo(x, outH);
+        }
+        bctx.stroke();
+        bctx.restore();
+      }
+
+      // ---- draw cell numbers if small ----
+      const canDrawNumbers = showNumbers && rows <= 50 && cols <= 50 && cellW_px >= 24 && cellH_px >= 24;
+      if (canDrawNumbers) {
+        bctx.textAlign = "center";
+        bctx.textBaseline = "middle";
+        const fontPx = Math.max(10, Math.floor(cellH_px * 0.4));
+        bctx.font = `${fontPx}px monospace`;
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const val = matrix[r][c];
+            const [R, G, B] = mapColor(val);
+            const luminance = 0.299 * R + 0.587 * G + 0.114 * B;
+            bctx.fillStyle = luminance < 128 ? "#fff" : "#000"; 
+
+            const cx = c * cellW_px + cellW_px / 2;
+            const cy = r * cellH_px + cellH_px / 2;
+            bctx.fillText(Number(val).toFixed(1), cx, cy);
+          }
+        }
+      }
+      ctx.clearRect(0, 0, outW, outH);
+      ctx.drawImage(back, 0, 0, outW, outH);
+    }, [matrix, size, scaleFactor, showNumbers, colorMapName]);
+
+    const downloadAsPNG = () => {
+      const url = canvasRef.current.toDataURL("image/png");
+      const a = document.createElement("a");
+      a.href = url; a.download = "weights.png"; a.click();
+    };
+
+    const downloadAsJSON = () => {
+      const blob = new Blob([JSON.stringify(matrix)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = "weights.json"; a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    return (
+      <div style={{ textAlign: "center" }}>
+        <canvas
+          ref={canvasRef}
+          style={{ border: "1px solid #444", borderRadius: 8 }}
+        />
+        <div
+          style={{
+            marginTop: 10,
+            display: "flex",
+            justifyContent: "center",
+            gap: 8,
+            flexWrap: "wrap",
+          }}
+        >
+          <button onClick={downloadAsPNG}>Download PNG</button>
+          <button onClick={downloadAsJSON}>Download JSON</button>
+          {matrix && matrix.length * matrix[0].length < 10_000 && (
+            <button onClick={() => setShowNumbers((v) => !v)}>
+              {showNumbers ? "Hide Numbers" : "Show Numbers"}
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+
+  const baseMemories = parseMemoriesSafe(memories);
+  const neuronCount =
+    Array.isArray(network?.C) && Array.isArray(network?.C[0])
+      ? network.C.length
+      : Array.isArray(network?.C)
+      ? network.C.length
+      : 0;
+
+  useEffect(() => {
+    if (rule !== "decay") setScale(1.0);
+  }, [rule]);
+
+  async function beginLearning() {
+    try {
+      if (!network?.C) {
+        setError("No network available from Construction phase.");
+        setLearningComplete(false);
+        return;
+      }
+      if (!API_URL) {
+        setError("VITE_API_URL missing in .env.local");
+        return;
+      }
+
+      const Nnet = network.C.length;
+      const source =
+        Array.isArray(memList) && memList.length > 0 ? memList : baseMemories;
+
+      if (!Array.isArray(source) || !source.length) {
+        setError("No memories loaded. Import or build some first.");
+        return;
+      }
+
+      const memWidth = source[0]?.length ?? 0;
+      if (Nnet > 0 && memWidth !== Nnet) {
+        setError(
+          `Neuron count mismatch: memories use ${memWidth}, network expects ${Nnet}.`
+        );
+        return;
+      }
+
+      const payload = {
+        memories: source.map((r) => r.map((v) => (v === 1 ? 1 : -1))),
+        N: network.C.length,
+        C_b64: encodeMatrixToBase64(network.C),
+        learning_rate: learningRate,
+        scale,
+        rule,
+        view_layout: layoutChoice
+          ? { rows: layoutChoice.rows, cols: layoutChoice.cols }
+          : null,
+      };
+
+      console.log("Sending learning payload:", payload);
+
+      const res = await fetch(`${API_URL}/learn`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) throw new Error(`Backend error: ${res.status}`);
+      const data = await res.json();
+
+      if (data.ok && data.network_id) {
+        setNetworkId(data.network_id);
+      }
+
+      if (data.W_hist) {
+        setWHist(data.W_hist);
+        setCurrentStep(data.W_hist.length - 1);
+        setLearningComplete(true);
+        markLearningRun();
+      } else {
+        setError("No W_hist returned from backend.");
+      }
+    } catch (err) {
+      console.error("Learning error:", err);
+      setError(err.message);
+      setLearningComplete(false);
+    }
+  }
+
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "#0f141a",
+        color: "#eaf4ff",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        padding: "40px 0",
+      }}
+    >
+      <h1 style={{ marginBottom: 24 }}>Learning Phase</h1>
+
+      <Link
+        to="/"
+        style={navBtnLeft}
+      >
+        Back to Construction
+      </Link>
+
+      <Link
+        to={learningComplete ? "/simulation" : "#"}
+        onClick={(e) => !learningComplete && e.preventDefault()}
+        style={{
+          ...navBtnRight,
+          background: learningComplete ? "#1a6fd6" : "#555",
+          cursor: learningComplete ? "pointer" : "not-allowed",
+          opacity: learningComplete ? 1 : 0.5,
+        }}
+      >
+        Go to Simulation
+      </Link>
+
+      <div style={mainContainer}>
+        {/* Left: Controls */}
+        <div style={panelLeft}>
+          <div>
+            <label style={label}>Input Memories:</label>
+            <textarea
+              value={memories ?? ""}
+              onChange={(e) => setMemories(e.target.value)}
+              rows={7}
+              className="mono"
+              style={textarea}
+            />
+          </div>
+
+          <div>
+            <label style={label}>Learning Rate (μ):</label>
+            <input
+              type="number"
+              step="0.01"
+              value={learningRate}
+              onChange={(e) => setLearningRate(parseFloat(e.target.value))}
+              style={input}
+            />
+          </div>
+
+          <div>
+            <label style={label}>Learning Rule:</label>
+            <select
+              value={rule}
+              onChange={(e) => setRule(e.target.value)}
+              style={input}
+            >
+              <option style={{ color: "#000" }} value="standard">
+                Standard
+              </option>
+              <option style={{ color: "#000" }} value="iterative">
+                Iterative
+              </option>
+              <option style={{ color: "#000" }} value="decay">
+                Decay
+              </option>
+            </select>
+          </div>
+
+          {rule === "decay" && (
+            <div>
+              <label style={label}>Scale:</label>
+              <input
+                type="number"
+                step="0.1"
+                value={scale}
+                onChange={(e) => setScale(parseFloat(e.target.value))}
+                style={input}
+              />
+            </div>
+          )}
+
+          {neuronCount > 0 && (
+            <div style={{ marginTop: 8 }}>
+              <CollapsibleHeader
+                open={pickerOpen}
+                onToggle={() => setPickerOpen((o) => !o)}
+                layoutChoice={layoutChoice}
+                neuronCount={neuronCount}
+                memCount={memList.length}
+              />
+              {pickerOpen && (
+                <div style={{ marginTop: 10 }}>
+                  <LayoutPicker
+                    key={pickerKey}
+                    neuronCount={neuronCount}
+                    value={layoutChoice}
+                    onLayoutChange={setLayoutChoice}
+                    approxContainerWidth={480}
+                    initialMemories={parseMemoriesSafe(memories)}
+                    onMemoriesChange={(list) => {
+                      setTimeout(() => {
+                        setMemList(list);
+                        setMemories(JSON.stringify(list, null, 2));
+                      }, 0);
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          <MemoryImporter
+            expectedN={neuronCount}
+            onImportMemories={(parsed, mode) => {
+              let next = parsed;
+              if (mode === "append" && memList.length > 0) {
+                const w = memList[0].length;
+                if (parsed[0]?.length !== w) {
+                  alert(
+                    `Append failed: imported memories have width ${parsed[0]?.length}, expected ${w}.`
+                  );
+                  return;
+                }
+                next = [...memList, ...parsed];
+              }
+              setMemList(next);
+              setMemories(JSON.stringify(next, null, 2));
+              setWHist(null);
+              setCurrentStep(0);
+              setPickerKey((k) => k + 1);
+            }}
+          />
+          <div style={{ marginTop: 12, display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input
+              type="number"
+              min={1}
+              step={1}
+              value={randomCount}
+              onChange={(e) => setRandomCount(Math.max(1, Number(e.target.value) || 1))}
+              style={{ width: 80, padding: 8, borderRadius: 6, background: 'transparent', color: '#eaf4ff', border: '1px solid rgba(255,255,255,0.08)' }}
+              disabled={neuronCount === 0}
+            />
+            <button
+              onClick={() => {
+                // generate random memories
+                if (!neuronCount || neuronCount <= 0) {
+                  setError('Cannot generate memories: neuron count is zero.');
+                  return;
+                }
+                const n = Math.max(1, Math.floor(randomCount));
+                const out = [];
+                for (let i = 0; i < n; i++) {
+                  const row = Array.from({ length: neuronCount }, () => (Math.random() < 0.5 ? 1 : -1));
+                  out.push(row);
+                }
+                setMemList(out);
+                setMemories(JSON.stringify(out, null, 2));
+                setWHist(null);
+                setCurrentStep(0);
+                setPickerKey(k => k + 1);
+                setError(null);
+              }}
+              disabled={neuronCount === 0}
+              style={{ padding: '8px 12px', borderRadius: 8, background: '#1a6fd6', color: '#fff', border: 'none', fontWeight: 600, cursor: 'pointer' }}
+            >
+              Generate Random Memories
+            </button>
+          </div>
+        
+        <button onClick={beginLearning} style={btnPrimary}>
+          Begin Learning
+        </button>
+
+          {error && (
+            <p style={{ color: "red", marginTop: 8, textAlign: "center" }}>{error}</p>
+          )}
+        </div>
+
+        {/* Right: Visualization */}
+        <div style={panelRight}>
+          {WHist && WHist.length > 0 ? (
+            <>
+              <h2>
+                Weight Matrix W (Step {currentStep + 1}/{WHist.length})
+              </h2>
+              <WeightsCanvas 
+                matrix={WHist && WHist.length ? WHist[currentStep] : null}
+                colorMapName={learningColorScheme}
+                onComputedRange={setRange}
+              />
+              <LearningLegendBar
+                min={range.min}
+                max={range.max}
+                mapName={learningColorScheme} 
+              />
+              <input
+                type="range"
+                min={0}
+                max={WHist.length - 1}
+                value={currentStep}
+                onChange={(e) => setCurrentStep(parseInt(e.target.value))}
+                style={{ width: "100%", marginTop: 16 }}
+              />
+              <div style={{ marginTop: 20, textAlign: "center" }}>
+                <h3
+                  style={{
+                    fontSize: "16px",
+                    fontWeight: 600,
+                    color: "#eaf4ff",
+                    marginBottom: 10,
+                    letterSpacing: "0.5px",
+                  }}
+                >
+                  Color Scheme
+                </h3>
+              </div>
+              <div
+                style={{
+                  marginTop: 12,
+                  display: "grid",
+                  gridTemplateColumns: "repeat(3, 1fr)", // 3 per row
+                  gap: "10px",
+                  justifyItems: "center",
+                }}
+              >
+                {[
+                  "blueWhiteRed",
+                  "viridis",
+                  "plasma",
+                  "magma",
+                  "inferno",
+                  "cividis",
+                ].map((scheme) => (
+                  <div
+                    key={scheme}
+                    onClick={() => setLearningColorScheme(scheme)}
+                    style={{
+                      width: "90px",
+                      padding: "8px",
+                      borderRadius: "10px",
+                      border:
+                        learningColorScheme === scheme
+                          ? "2px solid #1a6fd6"
+                          : "1px solid rgba(255,255,255,0.15)",
+                      background: "rgba(255,255,255,0.06)",
+                      cursor: "pointer",
+                      textAlign: "center",
+                    }}
+                  >
+                    <div
+                      style={{
+                        height: "24px",
+                        borderRadius: "6px",
+                        border: "1px solid rgba(255,255,255,0.25)",
+                        backgroundImage:
+                          scheme === "blueWhiteRed"
+                            ? "linear-gradient(to right, blue, white, red)"
+                            : scheme === "viridis"
+                            ? "linear-gradient(to right, #440154, #31688e, #35b779, #fde725)"
+                            : scheme === "plasma"
+                            ? "linear-gradient(to right, #0d0887, #7e03a8, #cc4778, #f0f921)"
+                            : scheme === "magma"
+                            ? "linear-gradient(to right, #000004, #51127c, #b73779, #fcfdbf)"
+                            : scheme === "inferno"
+                            ? "linear-gradient(to right, #000004, #420a68, #932667, #f0f921)"
+                            : "linear-gradient(to right, #30123b, #4145ab, #27ad81, #f4e33a)",
+                      }}
+                    />
+                    <span
+                      style={{
+                        display: "block",
+                        marginTop: "4px",
+                        fontSize: "12px",
+                        color: "#eaf4ff",
+                        opacity: 0.9,
+                      }}
+                    >
+                      {scheme}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+
+            </>
+            
+          ) : (
+            <div style={matrixPlaceholder}>
+              Matrix will appear here after learning
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CollapsibleHeader({ open, onToggle, layoutChoice, neuronCount, memCount }) {
+  const chev = open ? "▼" : "▶";
+  const layoutSummary = layoutChoice
+    ? `${layoutChoice.rows}×${layoutChoice.cols}${
+        layoutChoice.pad ? ` (pad ${layoutChoice.pad})` : ""
+      }`
+    : `${neuronCount} nodes`;
+  return (
+    <button onClick={onToggle} style={collapseBtn}>
+      <span>{chev} Memories & Layout</span>
+      <span style={{ opacity: 0.8, fontSize: 12 }}>
+        {memCount} {memCount === 1 ? "memory" : "memories"} • {layoutSummary}
+      </span>
+    </button>
+  );
+}
+
+const navBtnLeft = {
+  position: "absolute",
+  top: 20,
+  left: 20,
+  padding: "10px 12px",
+  borderRadius: 12,
+  background: "#1a6fd6",
+  color: "#eaf4ff",
+  textDecoration: "none",
+  fontWeight: 600,
+};
+
+const navBtnRight = {
+  position: "absolute",
+  top: 20,
+  right: 20,
+  padding: "10px 12px",
+  borderRadius: 12,
+  color: "#eaf4ff",
+  textDecoration: "none",
+  fontWeight: 600,
+};
+
+const mainContainer = {
+  display: "flex",
+  justifyContent: "center",
+  gap: 32,
+  width: "90%",
+  maxWidth: 1200,
+};
+
+const panelLeft = {
+  flex: 1,
+  background: "rgba(20,20,26,0.92)",
+  border: "1px solid rgba(255,255,255,0.1)",
+  borderRadius: 16,
+  padding: 20,
+  boxShadow: "0 10px 30px rgba(0,0,0,0.45)",
+  display: "flex",
+  flexDirection: "column",
+  gap: 16,
+};
+
+const panelRight = {
+  flex: 1,
+  background: "rgba(20,20,26,0.92)",
+  border: "1px solid rgba(255,255,255,0.1)",
+  borderRadius: 16,
+  padding: 20,
+  boxShadow: "0 10px 30px rgba(0,0,0,0.45)",
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+};
+
+const textarea = {
+  width: "96%",
+  padding: 8,
+  borderRadius: 10,
+  background: "rgba(255,255,255,0.06)",
+  color: "#eaf4ff",
+  border: "1px solid rgba(255,255,255,0.12)",
+};
+
+const input = {
+  width: "96%",
+  padding: 8,
+  borderRadius: 10,
+  background: "rgba(255,255,255,0.06)",
+  color: "#eaf4ff",
+  border: "1px solid rgba(255,255,255,0.12)",
+};
+
+const label = { fontSize: 12, opacity: 0.9, marginBottom: 4 };
+
+const btnPrimary = {
+  padding: "10px 12px",
+  borderRadius: 10,
+  border: "1px solid rgba(255,255,255,0.12)",
+  background: "#1a6fd6",
+  color: "#eaf4ff",
+  cursor: "pointer",
+  fontWeight: 600,
+};
+
+const collapseBtn = {
+  width: "100%",
+  display: "flex",
+  justifyContent: "space-between",
+  padding: "10px 12px",
+  borderRadius: 10,
+  border: "1px solid rgba(255,255,255,0.12)",
+  background: "rgba(255,255,255,0.06)",
+  color: "#eaf4ff",
+  fontWeight: 600,
+};
+
+const matrixPlaceholder = {
+  width: 300,
+  height: 300,
+  border: "2px dashed rgba(255,255,255,0.2)",
+  borderRadius: 12,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  color: "rgba(255,255,255,0.5)",
+};

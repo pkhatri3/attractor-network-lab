@@ -1,0 +1,23 @@
+This is the new version of the project.
+
+Done by Pranav Khatri on Oct 24 - Oct 27
+
+Features/Bug Fixes:
+- All templates with the same number of nodes are the same size 
+regardless of the magnifier/how zoomed the screen is.
+- Allows to spam add the templates instead of having the click 
+on the dropdown everytime to add a template onto the sandbox.
+
+Future updates:
+- Plan on creating a feature to give the user the option to move around an entire template/network instead of just nodes.
+- Need to fix it so the distance between the templates remain the same 
+when zoomed in.
+- Would like to implement major changes on the design to make it more
+eye appealing and easier to use
+- Waiting for Tommorow (Oct 28) to meet up with the client before working 
+anymore on this today
+
+How to use?
+
+Please simply just replace the Sandbox.jsx file in sigma-prototype folder
+with this one. All of the other instructions remain the same.

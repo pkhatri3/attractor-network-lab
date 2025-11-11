@@ -1,0 +1,59 @@
+// src/components/MenuButton.jsx
+import React from "react";
+
+export default function MenuButton({ onClick, isOpen = false }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label="Open tools menu"
+      aria-expanded={isOpen}
+      style={{
+        position: "absolute",
+        top: 12,
+        left: 12,
+        zIndex: 20,
+        width: 44,
+        height: 44,
+        borderRadius: 12,
+        border: "1px solid rgba(255,255,255,0.12)",
+        background: "rgba(20,20,26,0.75)",
+        color: "#eaf4ff",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        cursor: "pointer",
+        boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
+        backdropFilter: "blur(8px)",
+        transition: "transform 0.15s ease",
+        transform: isOpen ? "rotate(90deg)" : "none",
+      }}
+    >
+      <div style={{ width: 20 }}>
+        <div
+          style={{
+            height: 2,
+            background: "#eaf4ff",
+            margin: "3px 0",
+            opacity: 0.9,
+          }}
+        />
+        <div
+          style={{
+            height: 2,
+            background: "#eaf4ff",
+            margin: "3px 0",
+            opacity: 0.9,
+          }}
+        />
+        <div
+          style={{
+            height: 2,
+            background: "#eaf4ff",
+            margin: "3px 0",
+            opacity: 0.9,
+          }}
+        />
+      </div>
+    </button>
+  );
+}

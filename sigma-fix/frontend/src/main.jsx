@@ -1,0 +1,22 @@
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App.jsx";
+import "./styles/global.css";
+import { GraphProvider } from "./GraphContext.jsx";
+import { LearningProvider } from "./LearningContext.jsx";
+import { SimulationProvider } from "./SimulationContext.jsx";
+import { BrowserRouter as Router } from "react-router-dom";
+
+ReactDOM.createRoot(document.getElementById("root")).render(
+  <React.StrictMode>
+      <GraphProvider>
+        <LearningProvider>
+          <SimulationProvider>
+            <Router>
+              <App />
+            </Router>
+          </SimulationProvider>
+        </LearningProvider>
+      </GraphProvider>
+  </React.StrictMode>
+);

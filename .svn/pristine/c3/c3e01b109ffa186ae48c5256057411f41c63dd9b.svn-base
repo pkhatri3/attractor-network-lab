@@ -1,0 +1,405 @@
+import React, {
+  useMemo,
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+} from "react";
+import { computeLayoutOptions, buildMask } from "../components/layoutOptions";
+
+const CELL = 40;
+const GAP = 2;
+
+function cellColors({ isPad, on }) {
+  if (isPad)
+    return {
+      bg: "rgba(128,128,128,0.25)",
+      fg: "rgba(255,255,255,0.35)",
+      border: "1px solid rgba(255,255,255,0.12)",
+      cursor: "default",
+    };
+  if (on)
+    return {
+      bg: "rgba(255,255,255,0.20)",
+      fg: "#eaf4ff",
+      border: "1px solid rgba(255,255,255,0.20)",
+      cursor: "pointer",
+    };
+  return {
+    bg: "rgba(255,255,255,0.06)",
+    fg: "#b9c6d2",
+    border: "1px solid rgba(255,255,255,0.12)",
+    cursor: "pointer",
+  };
+}
+
+export default function LayoutPicker({
+  neuronCount,
+  value,
+  onLayoutChange,
+  approxContainerWidth,
+  initialMemories = [],
+  onMemoriesChange,
+}) {
+  const options = useMemo(
+    () => computeLayoutOptions(neuronCount, { approxContainerWidth }),
+    [neuronCount, approxContainerWidth]
+  );
+
+  const selected =
+    (value && options.find((o) => o.key === value.key)) || options[0] || null;
+
+  if (!selected) {
+    return (
+      <div style={{ color: "orange", fontSize: 14 }}>
+        No valid layout available for N = {neuronCount}.
+        Try using fewer neurons or importing memories numerically.
+      </div>
+    );
+  }
+
+  const [currentMem, setCurrentMem] = useState([]);
+  const [memList, setMemList] = useState([]);
+  const [selectedMemIdx, setSelectedMemIdx] = useState(-1);
+
+  useEffect(() => {
+    if (neuronCount <= 0) {
+      setCurrentMem([]);
+      setMemList([]);
+      setSelectedMemIdx(-1);
+      return;
+    }
+
+    const cleaned = (Array.isArray(initialMemories) ? initialMemories : [])
+      .filter((m) => Array.isArray(m) && m.length === neuronCount)
+      .map((m) => m.map((v) => (v === 1 ? 1 : -1)));
+
+    if (cleaned.length) {
+      setMemList(cleaned);
+      setSelectedMemIdx(0);
+      setCurrentMem(cleaned[0].slice());
+    } else {
+      const blank = Array(neuronCount).fill(-1);
+      setMemList([]);
+      setSelectedMemIdx(-1);
+      setCurrentMem(blank);
+    }
+  }, [neuronCount]);
+
+  const mask = useMemo(() => {
+    if (!selected) return [];
+    return buildMask(neuronCount, selected.base);
+  }, [neuronCount, selected]);
+
+  const handleCellToggle = useCallback(
+    (cellIndex) => {
+      if (!selected || !mask[cellIndex] || cellIndex >= neuronCount) return;
+      setCurrentMem((prev) => {
+        const next = prev.slice();
+        next[cellIndex] = next[cellIndex] === 1 ? -1 : 1;
+        return next;
+      });
+    },
+    [mask, neuronCount, selected]
+  );
+
+  // --- Global drag management ---
+  const isMouseDown = useRef(false);
+  const toggled = useRef(new Set());
+
+  const handleGlobalMove = useCallback(
+    (e) => {
+      if (!isMouseDown.current) return;
+      const target = e.target;
+      const idxAttr = target.getAttribute("data-idx");
+      if (idxAttr == null) return;
+      const idx = parseInt(idxAttr, 10);
+      if (Number.isNaN(idx)) return;
+      if (!toggled.current.has(idx)) {
+        handleCellToggle(idx);
+        toggled.current.add(idx);
+      }
+    },
+    [handleCellToggle]
+  );
+
+  const stopDrag = useCallback(() => {
+    isMouseDown.current = false;
+    toggled.current.clear();
+    document.removeEventListener("mousemove", handleGlobalMove);
+    document.removeEventListener("mouseup", stopDrag);
+  }, [handleGlobalMove]);
+
+  const startDrag = (idx) => {
+    isMouseDown.current = true;
+    toggled.current.clear();
+    handleCellToggle(idx);
+    toggled.current.add(idx);
+    document.addEventListener("mousemove", handleGlobalMove);
+    document.addEventListener("mouseup", stopDrag);
+  };
+
+  const maxCellSize = 40;
+  const maxWidth = 600;
+  const size = Math.min(maxCellSize, Math.floor(maxWidth / selected.cols));
+
+  const addCurrentAsMemory = () => {
+    if (currentMem.length !== neuronCount) return;
+    setMemList((prev) => {
+      const next = [...prev, currentMem.slice()];
+      setSelectedMemIdx(next.length - 1);
+      onMemoriesChange?.(next, "add", currentMem.slice());
+      return next;
+    });
+  };
+
+  const clearCurrent = () => setCurrentMem(Array(neuronCount).fill(-1));
+
+  const selectMemory = (idx) => {
+    setSelectedMemIdx(idx);
+    const m = memList[idx];
+    if (m) setCurrentMem(m.slice());
+  };
+
+  const deleteMemory = (idx) => {
+    setMemList((list) => {
+      const next = list.slice(0, idx).concat(list.slice(idx + 1));
+      if (selectedMemIdx === idx) {
+        if (next.length) {
+          setSelectedMemIdx(0);
+          setCurrentMem(next[0].slice());
+        } else {
+          setSelectedMemIdx(-1);
+          setCurrentMem(Array(neuronCount).fill(-1));
+        }
+      }
+      onMemoriesChange?.(next, "delete", idx);
+      return next;
+    });
+  };
+
+  const cloneMemory = (idx) => {
+    const m = memList[idx];
+    if (!m) return;
+    setMemList((list) => {
+      const next = [...list, m.slice()];
+      onMemoriesChange?.(next, "clone", m.slice());
+      return next;
+    });
+  };
+
+  const handleLayoutChange = (e) => {
+    const next = options.find((o) => o.key === e.target.value) || null;
+    onLayoutChange?.(next);
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ fontSize: 12, opacity: 0.9, marginBottom: 4 }}>
+        Neuron Layout (view):
+      </div>
+      <select
+        value={selected?.key || ""}
+        onChange={handleLayoutChange}
+        style={{
+          width: "100%",
+          padding: 8,
+          borderRadius: 10,
+          background: "rgba(255,255,255,0.06)",
+          color: "#eaf4ff",
+          border: "1px solid rgba(255,255,255,0.12)",
+        }}
+      >
+        {options.map((opt) => (
+          <option key={opt.key} value={opt.key} style={{ color: "black" }}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
+
+      {selected && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ fontSize: 12, opacity: 0.9, marginBottom: 2 }}>
+            Build / Edit Memory
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: `repeat(${selected.cols}, ${size}px)`,
+              gap: GAP,
+              alignSelf: "start",
+              userSelect: "none",
+            }}
+          >
+            {Array.from({ length: selected.base }).map((_, idx) => {
+              const isReal = mask[idx];
+              const on = isReal ? currentMem[idx] === 1 : false;
+              const { bg, fg, border, cursor } = cellColors({ isPad: !isReal, on });
+
+              return (
+                <div
+                  key={idx}
+                  data-idx={idx}
+                  onMouseDown={() => startDrag(idx)}
+                  className="mono"
+                  style={{
+                    width: size,
+                    height: size,
+                    borderRadius: 6,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: bg,
+                    color: fg,
+                    border,
+                    fontSize: 12,
+                    userSelect: "none",
+                    cursor,
+                    transition: "background 120ms ease",
+                  }}
+                  title={!isReal ? "Padding" : on ? "+1" : "-1"}
+                >
+                  {!isReal ? "—" : on ? "1" : "-1"}
+                </div>
+              );
+            })}
+          </div>
+
+          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+            <button onClick={addCurrentAsMemory} style={btnPrimary}>
+              Add as memory
+            </button>
+            <button onClick={clearCurrent} style={btnGhost}>
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Memory gallery */}
+      {selected && memList.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ fontSize: 12, opacity: 0.9 }}>
+            Memories ({memList.length})
+          </div>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            {memList.map((mem, idx) => {
+              const isSel = idx === selectedMemIdx;
+              return (
+                <div
+                  key={idx}
+                  style={{
+                    padding: 8,
+                    borderRadius: 10,
+                    border: isSel
+                      ? "2px solid #1a6fd6"
+                      : "1px solid rgba(255,255,255,0.12)",
+                    background: "rgba(255,255,255,0.04)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 6,
+                    boxShadow: isSel
+                      ? "0 0 0 4px rgba(26,111,214,0.15)"
+                      : "none",
+                  }}
+                >
+                  {/* Thumbnail grid */}
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: `repeat(${selected.cols}, ${Math.floor(
+                        CELL * 0.6
+                      )}px)`,
+                      gap: GAP,
+                      alignSelf: "start",
+                    }}
+                    onClick={() => selectMemory(idx)}
+                    title="Select to edit"
+                  >
+                    {Array.from({ length: selected.base }).map((_, j) => {
+                      const isReal = mask[j];
+                      const on = isReal ? mem[j] === 1 : false;
+                      const { bg, fg, border } = cellColors({ isPad: !isReal, on });
+                      return (
+                        <div
+                          key={j}
+                          className="mono"
+                          style={{
+                            width: Math.floor(CELL * 0.6),
+                            height: Math.floor(CELL * 0.6),
+                            borderRadius: 6,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            background: bg,
+                            color: fg,
+                            border,
+                            fontSize: 10,
+                            userSelect: "none",
+                          }}
+                        >
+                          {!isReal ? "—" : on ? "1" : "-1"}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 8,
+                      justifyContent: "space-between",
+                      marginTop: 4,
+                    }}
+                  >
+                    <button
+                      onClick={() => selectMemory(idx)}
+                      style={btnPrimary}
+                    >
+                      Select
+                    </button>
+                    <button
+                      onClick={() => cloneMemory(idx)}
+                      style={btnPrimary}
+                    >
+                      Clone
+                    </button>
+                    <button
+                      onClick={() => deleteMemory(idx)}
+                      style={{ ...btnPrimary, background: "#b33a3a" }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const btnPrimary = {
+  padding: "6px 10px",
+  borderRadius: 8,
+  border: "1px solid rgba(255,255,255,0.12)",
+  background: "#1a6fd6",
+  color: "#eaf4ff",
+  cursor: "pointer",
+  fontSize: 12,
+  fontWeight: 600,
+};
+
+const btnGhost = {
+  padding: "6px 10px",
+  borderRadius: 8,
+  border: "1px solid rgba(255,255,255,0.12)",
+  background: "rgba(255,255,255,0.08)",
+  color: "#eaf4ff",
+  cursor: "pointer",
+  fontSize: 12,
+  fontWeight: 600,
+};

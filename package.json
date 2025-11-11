@@ -1,0 +1,15 @@
+{
+  "name": "neural-merged",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev:backend": "uvicorn sigma-prototype.backend.api:app --reload --host 127.0.0.1 --port 8000",
+    "dev:frontend": "cd sigma-fix/frontend && npm run dev",
+    "dev:frontend:local": "cd sigma-fix/frontend && VITE_API_URL=http://127.0.0.1:8000 npm run dev",
+    "dev": "concurrently -k -n backend,frontend -c blue,green \"npm run dev:backend\" \"npm run dev:frontend:local\"",
+    "build:frontend": "cd sigma-fix/frontend && npm run build"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  }
+}

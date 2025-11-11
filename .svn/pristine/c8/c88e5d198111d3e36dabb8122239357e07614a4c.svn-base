@@ -1,0 +1,615 @@
+import React, { useState, useContext, useEffect } from "react";
+import { GraphContext } from "../GraphContext";
+import { LearningContext } from "../LearningContext";
+import { Link } from "react-router-dom";
+import LayoutPicker from "../components/LayoutPicker";
+import MemoryImporter from "../components/MemoryImporter";
+
+window.__API_URL__ = import.meta.env.VITE_API_URL;
+const API_URL = import.meta.env.VITE_API_URL;
+
+export default function LearningPhase() {
+  const { network } = useContext(GraphContext);
+  const {
+    WHist,
+    setWHist,
+    memories,
+    setMemories,
+    rule,
+    setRule,
+    learningRate,
+    setLearningRate,
+    scale,
+    setScale,
+    layoutChoice,
+    setLayoutChoice,
+    memList,
+    setMemList,
+    learningComplete,
+    setLearningComplete,
+    markLearningRun,
+  } = useContext(LearningContext);
+
+  const [currentStep, setCurrentStep] = useState(0);
+  const [error, setError] = useState(null);
+  const [pickerKey, setPickerKey] = useState(0);
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  useEffect(() => {
+    if (WHist && WHist.length > 0) {
+      setCurrentStep(WHist.length - 1);
+    }
+  }, [WHist]);
+
+  function parseMemoriesSafe(str) {
+    try {
+      const p = JSON.parse(str);
+      return Array.isArray(p) ? p : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function WeightsCanvas({ matrix, size = 500, scaleFactor = 2 }) {
+    const canvasRef = React.useRef();
+    const [showNumbers, setShowNumbers] = React.useState(true);
+
+    React.useEffect(() => {
+      if (!matrix || !matrix.length || !matrix[0].length) return;
+
+      const rows = matrix.length;
+      const cols = matrix[0].length;
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext("2d");
+
+      const dispW = size;
+      const dispH = size;
+      const sf = Math.max(1, scaleFactor || 1);
+      const outW = Math.floor(dispW * sf);
+      const outH = Math.floor(dispH * sf);
+
+      canvas.width = outW;
+      canvas.height = outH;
+      canvas.style.width = `${dispW}px`;
+      canvas.style.height = `${dispH}px`;
+
+      ctx.clearRect(0, 0, outW, outH);
+
+      let min = Infinity,
+        max = -Infinity;
+      const total = rows * cols;
+      if (total <= 200_000) {
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const v = matrix[r][c];
+            if (v < min) min = v;
+            if (v > max) max = v;
+          }
+        }
+      } else {
+        const samples = Math.min(100_000, total);
+        for (let i = 0; i < samples; i++) {
+          const r = (i * 9301 + 49297) % rows;
+          const c = (i * 23333 + 777) % cols;
+          const v = matrix[r][c];
+          if (v < min) min = v;
+          if (v > max) max = v;
+        }
+        if (!isFinite(min) || !isFinite(max)) {
+          min = -1;
+          max = 1;
+        }
+      }
+
+      const getRGB = (v) => {
+        if (v === 0) return [200, 200, 200];
+        if (v > 0) {
+          const norm = v / (max || 1);
+          return [
+            Math.round(200 + 55 * norm),
+            Math.round(200 - 200 * norm),
+            Math.round(200 - 200 * norm),
+          ];
+        } else {
+          const norm = v / (min || -1);
+          return [
+            Math.round(200 - 200 * norm),
+            Math.round(200 - 200 * norm),
+            Math.round(200 + 55 * norm),
+          ];
+        }
+      };
+
+      const img = ctx.createImageData(outW, outH);
+      const data = img.data;
+
+      let p = 0;
+      for (let y = 0; y < outH; y++) {
+        const rIdx = Math.floor((y * rows) / outH);
+        const row = matrix[rIdx];
+        for (let x = 0; x < outW; x++) {
+          const cIdx = Math.floor((x * cols) / outW);
+          const v = row[cIdx];
+          const [R, G, B] = getRGB(v);
+          data[p++] = R;
+          data[p++] = G;
+          data[p++] = B;
+          data[p++] = 255;
+        }
+      }
+      ctx.putImageData(img, 0, 0);
+
+      const cellW_px = outW / cols;
+      const cellH_px = outH / rows;
+
+      if (rows <= 100 && cols <= 100 && cellW_px >= 12 && cellH_px >= 12) {
+        ctx.strokeStyle = "rgba(0,0,0,0.35)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let r = 1; r < rows; r++) {
+          const y = Math.round(r * cellH_px) + 0.5;
+          ctx.moveTo(0, y);
+          ctx.lineTo(outW, y);
+        }
+        for (let c = 1; c < cols; c++) {
+          const x = Math.round(c * cellW_px) + 0.5;
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, outH);
+        }
+        ctx.stroke();
+      }
+
+      const canDrawNumbers =
+        showNumbers &&
+        rows <= 50 &&
+        cols <= 50 &&
+        cellW_px >= 24 &&
+        cellH_px >= 24;
+
+      if (canDrawNumbers) {
+        ctx.fillStyle = "#000";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        const fontPx = Math.max(10, Math.floor(cellH_px * 0.4));
+        ctx.font = `${fontPx}px monospace`;
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const val = matrix[r][c];
+            const cx = c * cellW_px + cellW_px / 2;
+            const cy = r * cellH_px + cellH_px / 2;
+            ctx.fillText(Number(val).toFixed(1), cx, cy);
+          }
+        }
+      }
+    }, [matrix, size, scaleFactor, showNumbers]);
+
+    const downloadAsPNG = () => {
+      const url = canvasRef.current.toDataURL("image/png");
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "weights.png";
+      a.click();
+    };
+
+    const downloadAsJSON = () => {
+      const blob = new Blob([JSON.stringify(matrix)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "weights.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    return (
+      <div style={{ textAlign: "center" }}>
+        <canvas
+          ref={canvasRef}
+          style={{ border: "1px solid #444", borderRadius: 8 }}
+        />
+        <div
+          style={{
+            marginTop: 10,
+            display: "flex",
+            justifyContent: "center",
+            gap: 8,
+            flexWrap: "wrap",
+          }}
+        >
+          <button onClick={downloadAsPNG}>Download PNG</button>
+          <button onClick={downloadAsJSON}>Download JSON</button>
+          {matrix && matrix.length * matrix[0].length < 10_000 && (
+            <button onClick={() => setShowNumbers((v) => !v)}>
+              {showNumbers ? "Hide Numbers" : "Show Numbers"}
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  const baseMemories = parseMemoriesSafe(memories);
+  const neuronCount =
+    Array.isArray(network?.C) && Array.isArray(network?.C[0])
+      ? network.C.length
+      : Array.isArray(network?.C)
+      ? network.C.length
+      : 0;
+
+  useEffect(() => {
+    if (rule !== "decay") setScale(1.0);
+  }, [rule]);
+
+  async function beginLearning() {
+    try {
+      if (!network?.C) {
+        setError("No network available from Construction phase.");
+        setLearningComplete(false);
+        return;
+      }
+      if (!API_URL) {
+        setError("VITE_API_URL missing in .env.local");
+        return;
+      }
+
+      const Nnet = network.C.length;
+      const source =
+        Array.isArray(memList) && memList.length > 0 ? memList : baseMemories;
+
+      if (!Array.isArray(source) || !source.length) {
+        setError("No memories loaded. Import or build some first.");
+        return;
+      }
+
+      const memWidth = source[0]?.length ?? 0;
+      if (Nnet > 0 && memWidth !== Nnet) {
+        setError(
+          `Neuron count mismatch: memories use ${memWidth}, network expects ${Nnet}.`
+        );
+        return;
+      }
+
+      const payload = {
+        memories: source.map((r) => r.map((v) => (v === 1 ? 1 : -1))),
+        C: network.C,
+        learning_rate: learningRate,
+        scale,
+        rule,
+        view_layout: layoutChoice
+          ? { rows: layoutChoice.rows, cols: layoutChoice.cols }
+          : null,
+      };
+
+      console.log("Sending learning payload:", payload);
+
+      const res = await fetch(`${API_URL}/learn`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) throw new Error(`Backend error: ${res.status}`);
+      const data = await res.json();
+
+      if (data.W_hist) {
+        setWHist(data.W_hist);
+        setCurrentStep(data.W_hist.length - 1);
+        setLearningComplete(true);
+        markLearningRun();
+      } else {
+        setError("No W_hist returned from backend.");
+      }
+    } catch (err) {
+      console.error("Learning error:", err);
+      setError(err.message);
+      setLearningComplete(false);
+    }
+  }
+
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "#0f141a",
+        color: "#eaf4ff",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        padding: "40px 0",
+      }}
+    >
+      <h1 style={{ marginBottom: 24 }}>Learning Phase</h1>
+
+      <Link
+        to="/"
+        style={navBtnLeft}
+      >
+        Back to Construction
+      </Link>
+
+      <Link
+        to={learningComplete ? "/simulation" : "#"}
+        onClick={(e) => !learningComplete && e.preventDefault()}
+        style={{
+          ...navBtnRight,
+          background: learningComplete ? "#1a6fd6" : "#555",
+          cursor: learningComplete ? "pointer" : "not-allowed",
+          opacity: learningComplete ? 1 : 0.5,
+        }}
+      >
+        Go to Simulation
+      </Link>
+
+      <div style={mainContainer}>
+        {/* Left: Controls */}
+        <div style={panelLeft}>
+          <div>
+            <label style={label}>Input Memories:</label>
+            <textarea
+              value={memories ?? ""}
+              onChange={(e) => setMemories(e.target.value)}
+              rows={7}
+              style={textarea}
+            />
+          </div>
+
+          <div>
+            <label style={label}>Learning Rate (μ):</label>
+            <input
+              type="number"
+              step="0.01"
+              value={learningRate}
+              onChange={(e) => setLearningRate(parseFloat(e.target.value))}
+              style={input}
+            />
+          </div>
+
+          <div>
+            <label style={label}>Learning Rule:</label>
+            <select
+              value={rule}
+              onChange={(e) => setRule(e.target.value)}
+              style={input}
+            >
+              <option style={{ color: "#000" }} value="standard">
+                Standard
+              </option>
+              <option style={{ color: "#000" }} value="iterative">
+                Iterative
+              </option>
+              <option style={{ color: "#000" }} value="decay">
+                Decay
+              </option>
+            </select>
+          </div>
+
+          {rule === "decay" && (
+            <div>
+              <label style={label}>Scale:</label>
+              <input
+                type="number"
+                step="0.1"
+                value={scale}
+                onChange={(e) => setScale(parseFloat(e.target.value))}
+                style={input}
+              />
+            </div>
+          )}
+
+          {neuronCount > 0 && (
+            <div style={{ marginTop: 8 }}>
+              <CollapsibleHeader
+                open={pickerOpen}
+                onToggle={() => setPickerOpen((o) => !o)}
+                layoutChoice={layoutChoice}
+                neuronCount={neuronCount}
+                memCount={memList.length}
+              />
+              {pickerOpen && (
+                <div style={{ marginTop: 10 }}>
+                  <LayoutPicker
+                    key={pickerKey}
+                    neuronCount={neuronCount}
+                    value={layoutChoice}
+                    onLayoutChange={setLayoutChoice}
+                    approxContainerWidth={480}
+                    initialMemories={parseMemoriesSafe(memories)}
+                    onMemoriesChange={(list) => {
+                      setTimeout(() => {
+                        setMemList(list);
+                        setMemories(JSON.stringify(list, null, 2));
+                      }, 0);
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          <MemoryImporter
+            expectedN={neuronCount}
+            onImportMemories={(parsed, mode) => {
+              let next = parsed;
+              if (mode === "append" && memList.length > 0) {
+                const w = memList[0].length;
+                if (parsed[0]?.length !== w) {
+                  alert(
+                    `Append failed: imported memories have width ${parsed[0]?.length}, expected ${w}.`
+                  );
+                  return;
+                }
+                next = [...memList, ...parsed];
+              }
+              setMemList(next);
+              setMemories(JSON.stringify(next, null, 2));
+              setWHist(null);
+              setCurrentStep(0);
+              setPickerKey((k) => k + 1);
+            }}
+          />
+
+        <button onClick={beginLearning} style={btnPrimary}>
+          Begin Learning
+        </button>
+
+          {error && (
+            <p style={{ color: "red", marginTop: 8, textAlign: "center" }}>{error}</p>
+          )}
+        </div>
+
+        {/* Right: Visualization */}
+        <div style={panelRight}>
+          {WHist && WHist.length > 0 ? (
+            <>
+              <h2>
+                Weight Matrix W (Step {currentStep + 1}/{WHist.length})
+              </h2>
+              <WeightsCanvas matrix={WHist[currentStep]} size={500} />
+              <input
+                type="range"
+                min={0}
+                max={WHist.length - 1}
+                value={currentStep}
+                onChange={(e) => setCurrentStep(parseInt(e.target.value))}
+                style={{ width: "100%", marginTop: 16 }}
+              />
+            </>
+          ) : (
+            <div style={matrixPlaceholder}>
+              Matrix will appear here after learning
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CollapsibleHeader({ open, onToggle, layoutChoice, neuronCount, memCount }) {
+  const chev = open ? "▼" : "▶";
+  const layoutSummary = layoutChoice
+    ? `${layoutChoice.rows}×${layoutChoice.cols}${
+        layoutChoice.pad ? ` (pad ${layoutChoice.pad})` : ""
+      }`
+    : `${neuronCount} nodes`;
+  return (
+    <button onClick={onToggle} style={collapseBtn}>
+      <span>{chev} Memories & Layout</span>
+      <span style={{ opacity: 0.8, fontSize: 12 }}>
+        {memCount} {memCount === 1 ? "memory" : "memories"} • {layoutSummary}
+      </span>
+    </button>
+  );
+}
+
+const navBtnLeft = {
+  position: "absolute",
+  top: 20,
+  left: 20,
+  padding: "10px 12px",
+  borderRadius: 12,
+  background: "#1a6fd6",
+  color: "#eaf4ff",
+  textDecoration: "none",
+  fontWeight: 600,
+};
+
+const navBtnRight = {
+  position: "absolute",
+  top: 20,
+  right: 20,
+  padding: "10px 12px",
+  borderRadius: 12,
+  color: "#eaf4ff",
+  textDecoration: "none",
+  fontWeight: 600,
+};
+
+const mainContainer = {
+  display: "flex",
+  justifyContent: "center",
+  gap: 32,
+  width: "90%",
+  maxWidth: 1200,
+};
+
+const panelLeft = {
+  flex: 1,
+  background: "rgba(20,20,26,0.92)",
+  border: "1px solid rgba(255,255,255,0.1)",
+  borderRadius: 16,
+  padding: 20,
+  boxShadow: "0 10px 30px rgba(0,0,0,0.45)",
+  display: "flex",
+  flexDirection: "column",
+  gap: 16,
+};
+
+const panelRight = {
+  flex: 1,
+  background: "rgba(20,20,26,0.92)",
+  border: "1px solid rgba(255,255,255,0.1)",
+  borderRadius: 16,
+  padding: 20,
+  boxShadow: "0 10px 30px rgba(0,0,0,0.45)",
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+};
+
+const textarea = {
+  width: "96%",
+  padding: 8,
+  borderRadius: 10,
+  background: "rgba(255,255,255,0.06)",
+  color: "#eaf4ff",
+  border: "1px solid rgba(255,255,255,0.12)",
+  fontFamily: "monospace",
+};
+
+const input = {
+  width: "96%",
+  padding: 8,
+  borderRadius: 10,
+  background: "rgba(255,255,255,0.06)",
+  color: "#eaf4ff",
+  border: "1px solid rgba(255,255,255,0.12)",
+};
+
+const label = { fontSize: 12, opacity: 0.9, marginBottom: 4 };
+
+const btnPrimary = {
+  padding: "10px 12px",
+  borderRadius: 10,
+  border: "1px solid rgba(255,255,255,0.12)",
+  background: "#1a6fd6",
+  color: "#eaf4ff",
+  cursor: "pointer",
+  fontWeight: 600,
+};
+
+const collapseBtn = {
+  width: "100%",
+  display: "flex",
+  justifyContent: "space-between",
+  padding: "10px 12px",
+  borderRadius: 10,
+  border: "1px solid rgba(255,255,255,0.12)",
+  background: "rgba(255,255,255,0.06)",
+  color: "#eaf4ff",
+  fontWeight: 600,
+};
+
+const matrixPlaceholder = {
+  width: 300,
+  height: 300,
+  border: "2px dashed rgba(255,255,255,0.2)",
+  borderRadius: 12,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  color: "rgba(255,255,255,0.5)",
+};
