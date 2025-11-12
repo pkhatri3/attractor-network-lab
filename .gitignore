@@ -49,3 +49,4 @@ htmlcov/
 # Misc
 *.sqlite3
 *.db
+.svn/
