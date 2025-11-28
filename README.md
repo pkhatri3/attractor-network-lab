@@ -1,67 +1,83 @@
-# Sigma merged workspace
+# New Demo
+- Rewritten using Sigma.js + Graphololgy instead of React Flow
 
-This repo consolidates the two projects into a single, easy-to-run workspace:
+# Running Locally (Development)
 
-- `sigma-fix/` — the modular, polished frontend (Vite + React + SigmaJS)
-- `sigma-prototype/` — the backend (FastAPI) with the extra memory capacity endpoint
+This explains how to run the frontend and backend locally on the VM for development.
 
-The root adds scripts to run both together.
+## Backend (FastAPI + Python)
 
-## Prerequisites
+- cd backend
+- svn update
+- python3 -m venv venv          # only first time
+- source venv/bin/activate      # activate venv (on Windows: venv\Scripts\activate)
+- pip install -r requirements.txt   # only first time
+- pkill -f "uvicorn api:app" ; uvicorn api:app --reload --host 0.0.0.0 --port 8001
 
-- Node.js 18+ and npm
-- Python 3.10+ (FastAPI/uvicorn)
+The backend will now be running at http://vodaphone.cs.umd.edu:8001 and you can test endpoints at http://vodaphone.cs.umd.edu:8001/docs
 
-## Backend setup
+Also, to deactivate/exit a venv, just run "deactivate"
 
-From the repo root:
+## Frontend (React + Vite)
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r sigma-prototype/backend/requirements.txt
-```
+- cd frontend
+- svn update
+- npm install       # only first time
+- npm run dev
 
-Run backend alone (optional):
+The frontend will now be running at http://localhost:5173
 
-```bash
-uvicorn sigma-prototype.backend.api:app --reload --host 127.0.0.1 --port 8000
-```
+## Summary
 
-## Frontend setup
+- (In venv) Start backend: pkill -f "uvicorn api:app" ; uvicorn api:app --reload --host 0.0.0.0 --port 8001
+- Start frontend: npm run dev  
+- Open browser: http://localhost:5173
 
-From the repo root:
+# Deployment
 
-```bash
-cd sigma-fix/frontend
-npm install
-```
+Right now, the production web app is running from my (Ryan’s) directory (`/home/rdecamp/neural/sigma-prototype`).  
+Because of the way the VM permissions are set up, each of us only has write access within our own home directory (I believe).  
+This means I am currently the only one who can directly deploy changes to the live site.  
 
-Run frontend alone (optional). It uses VITE_API_URL to reach the backend; the root scripts set this to http://127.0.0.1:8000 for you:
+To update the deployed version, should commit your changes to SVN.  
+I will then pull into my directory and redeploy.
 
-```bash
-VITE_API_URL=http://127.0.0.1:8000 npm run dev
-```
+## Frontend Deployment
 
-## Run both together
+1. Navigate to the frontend project:
+   cd ~/neural/sigma-prototype/frontend
 
-From the repo root:
+2. Update to the latest SVN changes:
+   svn update
 
-```bash
-npm install   # installs root dev tools (concurrently)
-npm run dev   # starts FastAPI on :8000 and Vite on :5173
-```
+3. Build the React app:
+   npm run build
 
-The frontend dev server will be available at http://127.0.0.1:5173 and will talk to the backend at http://127.0.0.1:8000.
+4. Copy the build output to Nginx’s serving directory:
+   sudo cp -r dist/* /var/www/frontend/
 
-## Notes
+## Backend Deployment
 
-- Frontend is sourced from `sigma-fix` (more modular components).
-- Backend is sourced from `sigma-prototype` (includes `/memory_capacity_test`).
-- You can switch the API target by editing `sigma-fix/frontend/.env.development` or overriding `VITE_API_URL` when running.
+1. Navigate to the backend project:
+   cd ~/neural/sigma-prototype/backend
 
-## Next steps (optional)
+2. Update to the latest SVN changes:
+   svn update
 
-- Unify remaining pages/components between the two frontends if needed.
-- Port the capacity test UI from the prototype into the `sigma-fix` frontend.
-- Add a Docker Compose for one-command up.
+3. Restart the FastAPI backend service so changes take effect:
+   sudo systemctl restart neural-backend
+
+## Quick Deploy (Frontend and Backend)
+
+For a full deployment after pulling SVN changes:
+
+# Frontend
+- cd ~/neural/sigma-prototype/frontend
+- svn update
+- npm run build
+- sudo cp -r dist/* /var/www/frontend/
+
+# Backend
+- cd ~/neural/sigma-prototype/backend
+- svn update
+- sudo systemctl restart neural-backend
