@@ -38,7 +38,7 @@ const ActivationLayout = ({
     iter,
     energyHist
   }) => (
-    <div style={{ width: "100%", paddingTop: "120px", display: "flex", flexDirection: "column", gap: 20, pointerEvents: "auto", zIndex: 1 }}>
+    <div style={{ width: "100%", paddingTop: "60px", display: "flex", flexDirection: "column", gap: 20, pointerEvents: "auto", zIndex: 1 }}>
       
       {/* activation simulation controls */}
       <div style={{
@@ -49,7 +49,7 @@ const ActivationLayout = ({
         display: "flex",
         flexDirection: "row",
         gap: 20,
-        width: "96%",
+        width: "97%",
         flexShrink: 0,
         minHeight: 0,
       }}>
@@ -173,25 +173,35 @@ const ActivationLayout = ({
               </div>
             </>
           ) : (
-            <StatePicker
-              neuronCount={neuronCount}
-              externalState={(isSimulating || hasRun) && AHist[iter] ? AHist[iter] : null}
-              cursor={(isSimulating || hasRun) ? 'not-allowed' : 'pointer'}
-              approxContainerWidth={480}
-              initialState={Avec}
-              disabled={isSimulating || hasRun}
-              iteration={(isSimulating || hasRun) ? iter : null}
-              onStateChange={(newState) => {
-                if (!isSimulating && !hasRun) {
-                  setAvec(newState);
-                  setAtext(JSON.stringify(newState));
-                }
-              }}
-            />
+  <div
+    style={{
+      width: "100%",
+      overflowX: "auto",   // <- scroll instead of stretching
+      paddingBottom: 4,
+    }}
+  >
+  
+            <div style={{ minWidth: 480 }}>
+      <StatePicker
+        neuronCount={neuronCount}
+        externalState={(isSimulating || hasRun) && AHist[iter] ? AHist[iter] : null}
+        cursor={(isSimulating || hasRun) ? 'not-allowed' : 'pointer'}
+        approxContainerWidth={480}
+        initialState={Avec}
+        disabled={isSimulating || hasRun}
+        iteration={(isSimulating || hasRun) ? iter : null}
+        onStateChange={(newState) => {
+          if (!isSimulating && !hasRun) {
+            setAvec(newState);
+            setAtext(JSON.stringify(newState));
+          }
+        }}
+      />
+    </div>
+        </div>
           )}
         </div>
       </div>
-
       {/* Energy graph */}
       <div style={{ ...panel, position: "relative", overflow: "visible" }}>
         <h3 style={{ marginTop: 0 }}>Network Energy</h3>
@@ -395,50 +405,44 @@ const CapacityLayout = ({
     </div>
   );
 
-const RightDrawer = ({
-    simulationNoiseLevel,
-    setSimulationNoiseLevel,
-    drawerOpen,
-    setDrawerOpen,
-    showW,
-    setShowW,
-    showMemories,
-    setShowMemories,
-    selectedMemoryIndex,
-    setSelectedMemoryIndex,
-    parsedMems,
-    finalW,
-    learningColorScheme,
-    isSimulating,
-    hasRun,
-    neuronCount,
-    simulationMode,
-    canSimulate,
-    generateNoisyInput,
-  }) => (
-    <div
-      style={{
-        position: "fixed",
-        top: 0,
-        right: 0,
-        height: "100vh",
-        width: "350px",
-        background: "rgba(20,20,26,0.70)",
-        borderLeft: "1px solid rgba(255,255,255,0.1)",
-        transition: "transform 0.25s ease",
-        padding: drawerOpen ? 20 : 0,
-        overflowY: "auto",
-        zIndex: 50,
-        pointerEvents: drawerOpen ? "auto" : "none",
-        transform: drawerOpen ? "translateX(0)" : "translateX(100%)",
-      }}
-    >
+  const RightDrawer = ({
+  drawerWidth,
+  simulationNoiseLevel,
+  setSimulationNoiseLevel,
+  setDrawerOpen,
+  showW,
+  setShowW,
+  showMemories,
+  setShowMemories,
+  selectedMemoryIndex,
+  setSelectedMemoryIndex,
+  parsedMems,
+  finalW,
+  learningColorScheme,
+  isSimulating,
+  hasRun,
+  neuronCount,
+  simulationMode,
+  canSimulate,
+  generateNoisyInput,
+}) => (
+  <div
+    style={{
+      width: drawerWidth,
+      height: "100%",
+      background: "rgba(20,20,26,0.70)",
+      borderRadius: 16,
+      border: "1px solid rgba(255,255,255,0.1)",
+      padding: 20,
+      overflowY: "auto",
+      boxSizing: "border-box",
+    }}
+  >
+    {/* simple close row */}
+    <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
       <button
         onClick={() => setDrawerOpen(false)}
         style={{
-          position: "absolute",
-          top: 8,
-          left: 10,
           padding: "4px 6px",
           borderRadius: 6,
           background: "rgba(255,255,255,0.12)",
@@ -446,173 +450,189 @@ const RightDrawer = ({
           border: "none",
           cursor: "pointer",
           fontSize: 12,
-          zIndex: 2000,
         }}
       >
         ❯
       </button>
+    </div>
 
-      {/* W */}
-      <div style={panel}>
-        <div style={panelHeader} onClick={() => setShowW(w => !w)}>
-          <span style={{
+    {/* W */}
+    <div style={panel}>
+      <div style={panelHeader} onClick={() => setShowW((w) => !w)}>
+        <span
+          style={{
             transform: showW ? "rotate(90deg)" : "rotate(0deg)",
-            transition: "0.2s"
-          }}>▶</span>
-          <h3>W</h3>
-        </div>
-        {showW && (
-          <div style={{ marginTop: 12 }}>
-            {finalW ? (
-              <WeightsCanvas matrix={finalW} size={300} cmapName={learningColorScheme || "blueWhiteRed"} />
-            ) : (
-              <p>No weights available.</p>
-            )}
-          </div>
-        )}
+            transition: "0.2s",
+          }}
+        >
+          ▶
+        </span>
+        <h3>W</h3>
       </div>
-
-      {/* Memories */}
-      <div style={panel}>
-        <div style={panelHeader} onClick={() => setShowMemories(m => !m)}>
-          <span style={{
-            transform: showMemories ? "rotate(90deg)" : "rotate(0deg)",
-            transition: "0.2s"
-          }}>▶</span>
-          <h3>Memories</h3>
+      {showW && (
+        <div style={{ marginTop: 12 }}>
+          {finalW ? (
+            <WeightsCanvas
+              matrix={finalW}
+              size={300}
+              cmapName={learningColorScheme || "blueWhiteRed"}
+            />
+          ) : (
+            <p>No weights available.</p>
+          )}
         </div>
-        {showMemories && (
-          <div style={{ marginTop: 12 }}>
-            {parsedMems.length ? (
-              <div style={{
+      )}
+    </div>
+
+    {/* Memories */}
+    <div style={panel}>
+      <div style={panelHeader} onClick={() => setShowMemories((m) => !m)}>
+        <span
+          style={{
+            transform: showMemories ? "rotate(90deg)" : "rotate(0deg)",
+            transition: "0.2s",
+          }}
+        >
+          ▶
+        </span>
+        <h3>Memories</h3>
+      </div>
+      {showMemories && (
+        <div style={{ marginTop: 12 }}>
+          {parsedMems.length ? (
+            <div
+              style={{
                 background: "rgba(255,255,255,0.05)",
                 border: "1px solid rgba(255,255,255,0.1)",
                 padding: 12,
                 borderRadius: 8,
                 maxHeight: 200,
-                overflowY: "auto"
-              }}>
-                {parsedMems.map((m, i) => (
-                  <div key={i}>#{i + 1}: {JSON.stringify(m)}</div>
-                ))}
-              </div>
-            ) : (
-              <p>No memories.</p>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Noisy input */}
-      {simulationMode === "activation" && (
-        <div style={panel}>
-          <h3>Generate Noisy Input</h3>
-
-          <div
-            style={{
-              background: 'rgba(255,255,255,0.04)',
-              padding: 10,
-              borderRadius: 8,
-              width: '94%',
-            }}
-          >
-            {/* Noise level slider */}
-            <div
-              style={{
-                fontSize: 13,
-                marginBottom: 6,
-                fontWeight: 600,
-                color: '#eaf4ff',
+                overflowY: "auto",
               }}
             >
-              Noise Level: {(simulationNoiseLevel * 100).toFixed(0)}%
+              {parsedMems.map((m, i) => (
+                <div key={i}>
+                  #{i + 1}: {JSON.stringify(m)}
+                </div>
+              ))}
             </div>
-
-            <input
-              type="range"
-              min={0}
-              max={0.5}
-              step={0.01}
-              value={simulationNoiseLevel}
-              onChange={(e) =>
-                setSimulationNoiseLevel(Number(e.target.value))
-              }
-              style={{ width: '100%' }}
-              disabled={isSimulating || hasRun}
-            />
-
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                fontSize: 10,
-                opacity: 0.6,
-                marginTop: 6,
-              }}
-            >
-              <span>0%</span>
-              <span>25%</span>
-              <span>50%</span>
-            </div>
-
-            {/* Memory selector and generation */}
-            <div
-              style={{
-                display: 'flex',
-                gap: 8,
-                marginTop: 8,
-                alignItems: 'center',
-              }}
-            >
-              <select
-                value={selectedMemoryIndex === null ? '' : selectedMemoryIndex}
-                onChange={(e) =>
-                  setSelectedMemoryIndex(
-                    e.target.value === '' ? null : Number(e.target.value)
-                  )
-                }
-                disabled={isSimulating || hasRun || parsedMems.length === 0}
-                style={{
-                  flex: 1,
-                  padding: 6,
-                  borderRadius: 6,
-                  background: 'transparent',
-                  color: '#eaf4ff',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                }}
-              >
-                {parsedMems.map((m, i) => (
-                  <option
-                    key={i}
-                    value={i}
-                    style={{ background: '#FFF', color: '#000' }}
-                  >
-                    Memory #{i + 1}
-                  </option>
-                ))}
-              </select>
-
-              <button
-                onClick={() => generateNoisyInput()}
-                disabled={isSimulating || hasRun || neuronCount === 0}
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: 8,
-                  border: 'none',
-                  fontWeight: 600,
-                  background: canSimulate && !isSimulating && !hasRun ? "#1a6fd6" : "#555",
-                  color: "#fff",
-                  cursor: canSimulate && !isSimulating && !hasRun ? "pointer" : "not-allowed",
-                }}
-              >
-                Generate
-              </button>
-            </div>
-          </div>
+          ) : (
+            <p>No memories.</p>
+          )}
         </div>
       )}
     </div>
-  );
+
+    {/* Noisy input */}
+    {simulationMode === "activation" && (
+      <div style={panel}>
+        <h3>Generate Noisy Input</h3>
+
+        <div
+          style={{
+            background: "rgba(255,255,255,0.04)",
+            padding: 10,
+            borderRadius: 8,
+            width: "94%",
+          }}
+        >
+          <div
+            style={{
+              fontSize: 13,
+              marginBottom: 6,
+              fontWeight: 600,
+              color: "#eaf4ff",
+            }}
+          >
+            Noise Level: {(simulationNoiseLevel * 100).toFixed(0)}%
+          </div>
+
+          <input
+            type="range"
+            min={0}
+            max={0.5}
+            step={0.01}
+            value={simulationNoiseLevel}
+            onChange={(e) => setSimulationNoiseLevel(Number(e.target.value))}
+            style={{ width: "100%" }}
+            disabled={isSimulating || hasRun}
+          />
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              fontSize: 10,
+              opacity: 0.6,
+              marginTop: 6,
+            }}
+          >
+            <span>0%</span>
+            <span>25%</span>
+            <span>50%</span>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              gap: 8,
+              marginTop: 8,
+              alignItems: "center",
+            }}
+          >
+            <select
+              value={selectedMemoryIndex === null ? "" : selectedMemoryIndex}
+              onChange={(e) =>
+                setSelectedMemoryIndex(
+                  e.target.value === "" ? null : Number(e.target.value)
+                )
+              }
+              disabled={isSimulating || hasRun || parsedMems.length === 0}
+              style={{
+                flex: 1,
+                padding: 6,
+                borderRadius: 6,
+                background: "transparent",
+                color: "#eaf4ff",
+                border: "1px solid rgba(255,255,255,0.08)",
+              }}
+            >
+              {parsedMems.map((m, i) => (
+                <option
+                  key={i}
+                  value={i}
+                  style={{ background: "#FFF", color: "#000" }}
+                >
+                  Memory #{i + 1}
+                </option>
+              ))}
+            </select>
+
+            <button
+              onClick={() => generateNoisyInput()}
+              disabled={isSimulating || hasRun || neuronCount === 0}
+              style={{
+                padding: "8px 12px",
+                borderRadius: 8,
+                border: "none",
+                fontWeight: 600,
+                background:
+                  canSimulate && !isSimulating && !hasRun ? "#1a6fd6" : "#555",
+                color: "#fff",
+                cursor:
+                  canSimulate && !isSimulating && !hasRun
+                    ? "pointer"
+                    : "not-allowed",
+              }}
+            >
+              Generate
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
+);
 
 function WeightsCanvas({ matrix, size = 500, scaleFactor = 2, cmapName = "blueWhiteRed" }) {
   const canvasRef = React.useRef();
@@ -803,6 +823,46 @@ export default function SimulationPhase() {
   const [showW, setShowW] = useState(false);
   const [showMemories, setShowMemories] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerWidth, setDrawerWidth] = useState(350); // px
+
+  const handleDrawerResizeStart = (e) => {
+  e.preventDefault();
+  const startX = e.clientX;
+  const startWidth = drawerWidth;
+
+  const onMouseMove = (moveEvent) => {
+    const delta = startX - moveEvent.clientX; // drag left/right
+    let newWidth = startWidth + delta;
+
+    const MIN_DRAWER_WIDTH = 300;   // how skinny the drawer can get
+    const MIN_MAIN_WIDTH = 700;     // how skinny the left content is allowed to get
+
+    const viewport = window.innerWidth || document.documentElement.clientWidth;
+    const horizontalPadding = 40;
+    const available = viewport - horizontalPadding;
+
+    // drawer cannot eat into the main content’s minimum width
+    const MAX_DRAWER_WIDTH = Math.max(
+      MIN_DRAWER_WIDTH,
+      available - MIN_MAIN_WIDTH
+    );
+
+    if (newWidth < MIN_DRAWER_WIDTH) newWidth = MIN_DRAWER_WIDTH;
+    if (newWidth > MAX_DRAWER_WIDTH) newWidth = MAX_DRAWER_WIDTH;
+
+    setDrawerWidth(newWidth);
+  };
+
+  const onMouseUp = () => {
+    window.removeEventListener("mousemove", onMouseMove);
+    window.removeEventListener("mouseup", onMouseUp);
+  };
+
+  window.addEventListener("mousemove", onMouseMove);
+  window.addEventListener("mouseup", onMouseUp);
+};
+
+
 
   const handleRunCapacityTest = async () => {
     try {
@@ -1150,16 +1210,15 @@ export default function SimulationPhase() {
     parsedMems = [];
   }
 
-  return (
+    return (
     <div
       style={{
         minHeight: "100vh",
         width: "100%",
         background: "#0f141a",
         color: "#eaf4ff",
-        display: "flex",
-        flexDirection: "column",
-        padding: 20,
+        position: "relative",
+        overflow: "hidden",
       }}
     >
       <Link
@@ -1177,19 +1236,22 @@ export default function SimulationPhase() {
           fontWeight: 600,
           boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
           backdropFilter: "blur(8px)",
+          zIndex: 10,
         }}
       >
         Back to Learning
       </Link>
 
       <button
-        onClick={() => {
-          setSimulationMode(simulationMode === "activation" ? "capacity" : "activation");
-        }}
+        onClick={() =>
+          setSimulationMode(
+            simulationMode === "activation" ? "capacity" : "activation"
+          )
+        }
         style={{
           position: "absolute",
           top: 20,
-          right: 20,
+          right: drawerOpen ? drawerWidth + 50 : 20,
           padding: "10px 12px",
           borderRadius: 12,
           border: "1px solid rgba(255,255,255,0.12)",
@@ -1199,106 +1261,157 @@ export default function SimulationPhase() {
           fontWeight: 600,
           boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
           backdropFilter: "blur(8px)",
+          zIndex: 10,
         }}
       >
-        {simulationMode === "activation" ? "Switch to Memory Capacity Test" : "Switch to Activation Simulation"}
+        {simulationMode === "activation"
+          ? "Switch to Memory Capacity Test"
+          : "Switch to Activation Simulation"}
       </button>
 
       <button
-        onClick={() => setDrawerOpen(o => !o)}
+        onClick={() => setDrawerOpen((o) => !o)}
         style={{
           position: "absolute",
           top: 70,
-          right: 20,
+          right: drawerOpen ? drawerWidth + 50 : 20,
           padding: "10px 12px",
           borderRadius: 12,
           border: "1px solid rgba(255,255,255,0.12)",
           background: drawerOpen ? "#555" : "#1a6fd6",
           color: "#eaf4ff",
           fontWeight: 600,
+          zIndex: 10,
         }}
       >
-        {drawerOpen ? "Open Side Panel" : "Open Side Panel"} {/* always open bc we use close arrow */}
+        {drawerOpen ? "Close Side Panel" : "Open Side Panel"}
       </button>
 
+      {/* MAIN FLEX LAYOUT */}
       <div
         style={{
-          width: "90%",
-          maxWidth: "1200px",
-          margin: "0 auto",
+          display: "flex",
+          paddingTop: 80,
+          paddingLeft: 20,
+          paddingRight: 20,
           boxSizing: "border-box",
+          minHeight: "100vh",
         }}
       >
+        {/* main content column */}
+        <div
+          style={{
+            flex: 1,
+            maxWidth: "1500px",
+             minWidth: 500,             
+            marginRight: drawerOpen ? 11 : 0,
+            transition: "margin-right 0.25s ease",
+          }}
+        >
+          <div
+            style={{
+              display: simulationMode === "activation" ? "block" : "none",
+            }}
+          >
+            <ActivationLayout
+              inputMode={inputMode}
+              setInputMode={setInputMode}
+              isSimulating={isSimulating}
+              hasRun={hasRun}
+              capacityTestActive={capacityTestActive}
+              canSimulate={canSimulate}
+              onStartSimulation={onStartSimulation}
+              handleReset={handleReset}
+              neuronCount={neuronCount}
+              Atext={Atext}
+              handleTextChange={handleTextChange}
+              Avec={Avec}
+              setAvec={setAvec}
+              AHist={AHist}
+              iter={iter}
+              energyHist={energyHist}
+            />
+          </div>
 
-        <div style={{ display: simulationMode === "activation" ? "block" : "none" }}>
-          <ActivationLayout
-            inputMode={inputMode}
-            setInputMode={setInputMode}
-            isSimulating={isSimulating}
-            hasRun={hasRun}
-            capacityTestActive={capacityTestActive}
-            canSimulate={canSimulate}
-            onStartSimulation={onStartSimulation}
-            handleReset={handleReset}
-            neuronCount={neuronCount}
-            Atext={Atext}
-            handleTextChange={handleTextChange}
-            Avec={Avec}
-            setAvec={setAvec}
-            AHist={AHist}
-            iter={iter}
-            energyHist={energyHist}
-          />
+          <div
+            style={{
+              display: simulationMode === "capacity" ? "block" : "none",
+            }}
+          >
+            <CapacityLayout
+              capacityNoiseLevel={capacityNoiseLevel}
+              setCapacityNoiseLevel={setCapacityNoiseLevel}
+              capacityTestActive={capacityTestActive}
+              capacityResults={capacityResults}
+              handleRunCapacityTest={handleRunCapacityTest}
+              panel={panel}
+            />
+          </div>
+
+          {error && (
+            <div
+              style={{
+                background: "rgba(255,0,0,0.15)",
+                border: "1px solid rgba(255,0,0,0.4)",
+                padding: 10,
+                borderRadius: 8,
+                marginTop: 12,
+                color: "#ff6b6b",
+              }}
+            >
+              {error}
+            </div>
+          )}
         </div>
 
-        <div style={{ display: simulationMode === "capacity" ? "block" : "none" }}>
-          <CapacityLayout
-            capacityNoiseLevel={capacityNoiseLevel}
-            setCapacityNoiseLevel={setCapacityNoiseLevel}
-            capacityTestActive={capacityTestActive}
-            capacityResults={capacityResults}
-            handleRunCapacityTest={handleRunCapacityTest}
-            panel={panel}
-          />
-        </div>
+        {/* resizer + drawer */}
+        {drawerOpen && (
+          <div
+            style={{
+              display: "flex",
+              height: "100%",
+            }}
+          >
+            {/* vertical resize handle */}
+            <div
+              onMouseDown={handleDrawerResizeStart}
+              style={{
+                width: 6,
+                cursor: "col-resize",
+                background: "rgba(255,255,255,0.08)",
+                borderRadius: 3,
+                alignSelf: "stretch",
+                marginLeft: 12,
+                marginRight: 6,
+              }}
+            />
 
-        <RightDrawer
-          simulationNoiseLevel={simulationNoiseLevel}
-          setSimulationNoiseLevel={setSimulationNoiseLevel}
-          drawerOpen={drawerOpen}
-          setDrawerOpen={setDrawerOpen}
-          showW={showW}
-          setShowW={setShowW}
-          showMemories={showMemories}
-          setShowMemories={setShowMemories}
-          selectedMemoryIndex={selectedMemoryIndex}
-          setSelectedMemoryIndex={setSelectedMemoryIndex}
-          parsedMems={parsedMems}
-          finalW={finalW}
-          learningColorScheme={learningColorScheme}
-          isSimulating={isSimulating}
-          hasRun={hasRun}
-          neuronCount={neuronCount}
-          simulationMode={simulationMode}
-          canSimulate={canSimulate}
-          generateNoisyInput={generateNoisyInput}
-      />
-
-        {error && (
-          <div style={{
-            background: "rgba(255,0,0,0.15)",
-            border: "1px solid rgba(255,0,0,0.4)",
-            padding: 10,
-            borderRadius: 8,
-            marginBottom: 12,
-            color: "#ff6b6b"
-          }}>
-            {error}
+            <RightDrawer
+              drawerWidth={drawerWidth}
+              simulationNoiseLevel={simulationNoiseLevel}
+              setSimulationNoiseLevel={setSimulationNoiseLevel}
+              setDrawerOpen={setDrawerOpen}
+              showW={showW}
+              setShowW={setShowW}
+              showMemories={showMemories}
+              setShowMemories={setShowMemories}
+              selectedMemoryIndex={selectedMemoryIndex}
+              setSelectedMemoryIndex={setSelectedMemoryIndex}
+              parsedMems={parsedMems}
+              finalW={finalW}
+              learningColorScheme={learningColorScheme}
+              isSimulating={isSimulating}
+              hasRun={hasRun}
+              neuronCount={neuronCount}
+              simulationMode={simulationMode}
+              canSimulate={canSimulate}
+              generateNoisyInput={generateNoisyInput}
+            />
           </div>
         )}
       </div>
     </div>
-);
+  );
 }
 
 const panel = {
