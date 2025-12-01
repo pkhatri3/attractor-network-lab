@@ -55,7 +55,7 @@ export default function LearningPhase() {
   const [allowDiagonal, setAllowDiagonal] = useState(false);
   const [useCoarseView, setUseCoarseView] = useState(true);
   const [weightStats, setWeightStats] = useState(null);
-
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     if (WHist && WHist.length > 0) {
@@ -179,24 +179,30 @@ function computeWeightStats(matrix) {
     const canvasRef = React.useRef();
     const backRef = React.useRef();
     const [showNumbers, setShowNumbers] = React.useState(true);
+    const SHOW_NUMBERS_LIMIT = 40; 
+    const COARSEN_THRESHOLD = 128;
+    const COARSE_SIZE = 64; 
 
     React.useEffect(() => {
       if (!matrix || !matrix.length || !matrix[0].length) return;
       const srcRows = matrix.length;
       const srcCols = matrix[0].length;
       let renderMatrix = matrix;
-      const LARGE_THRESHOLD = 256;
-      const COARSE_SIZE = 64;
-
       let rows = srcRows;
       let cols = srcCols;
 
-
-      const isLarge = srcRows > LARGE_THRESHOLD || srcCols > LARGE_THRESHOLD;
+      const isLarge = srcRows > COARSEN_THRESHOLD || srcCols > COARSEN_THRESHOLD;
       if (isLarge) {
         renderMatrix = buildCoarseMatrix(matrix, COARSE_SIZE);
         rows = renderMatrix.length;
         cols = renderMatrix[0].length;
+      }
+
+      
+      if (rows > SHOW_NUMBERS_LIMIT || cols > SHOW_NUMBERS_LIMIT) {
+        if (showNumbers) {
+          setShowNumbers(false);
+        }
       }
       const canvas = canvasRef.current;
       const ctx = canvas.getContext("2d");
@@ -235,7 +241,7 @@ function computeWeightStats(matrix) {
       if (total <= 200_000) {
         for (let r = 0; r < rows; r++) {
           for (let c = 0; c < cols; c++) {
-            const v = matrix[r][c];
+            const v = renderMatrix[r][c];
             if (v < min) min = v;
             if (v > max) max = v;
           }
@@ -245,7 +251,7 @@ function computeWeightStats(matrix) {
         for (let i = 0; i < samples; i++) {
           const r = (i * 9301 + 49297) % rows;
           const c = (i * 23333 + 777) % cols;
-          const v = matrix[r][c];
+          const v = renderMatrix[r][c];
           if (v < min) min = v;
           if (v > max) max = v;
         }
@@ -292,7 +298,7 @@ function computeWeightStats(matrix) {
 
       for (let y = 0; y < outH; y++) {
         const rIdx = Math.floor((y * rows) / outH);
-        const row = matrix[rIdx];
+        const row = renderMatrix[rIdx];
         for (let x = 0; x < outW; x++) {
           const cIdx = Math.floor((x * cols) / outW);
           const v = row[cIdx];
@@ -329,7 +335,7 @@ function computeWeightStats(matrix) {
       }
 
       // ---- draw cell numbers if small ----
-      const canDrawNumbers = showNumbers && rows <= 99 && cols <= 99;
+      const canDrawNumbers = showNumbers && rows <= SHOW_NUMBERS_LIMIT && cols <= SHOW_NUMBERS_LIMIT;
       if (canDrawNumbers) {
         bctx.textAlign = "center";
         bctx.textBaseline = "middle";
@@ -337,7 +343,7 @@ function computeWeightStats(matrix) {
         bctx.font = `${fontPx}px monospace`;
         for (let r = 0; r < rows; r++) {
           for (let c = 0; c < cols; c++) {
-            const val = matrix[r][c];
+            const val = renderMatrix[r][c];
             const [R, G, B] = mapColor(val);
             const luminance = 0.299 * R + 0.587 * G + 0.114 * B;
             bctx.fillStyle = luminance < 128 ? "#fff" : "#000";
@@ -389,11 +395,14 @@ function computeWeightStats(matrix) {
         >
           <button onClick={downloadAsPNG}>Download PNG</button>
           <button onClick={downloadAsJSON}>Download JSON</button>
-          {matrix && matrix.length * matrix[0].length < 10_000 && (
-            <button onClick={() => setShowNumbers((v) => !v)}>
-              {showNumbers ? "Hide Numbers" : "Show Numbers"}
-            </button>
-          )}
+          {matrix &&
+            matrix.length <= SHOW_NUMBERS_LIMIT &&
+            matrix[0].length <= SHOW_NUMBERS_LIMIT && (
+              <button onClick={() => setShowNumbers((v) => !v)}>
+                {showNumbers ? "Hide Numbers" : "Show Numbers"}
+              </button>
+            )}
+
         </div>
       </div>
     );
@@ -439,6 +448,23 @@ function computeWeightStats(matrix) {
       setWeightStats(null);
     }
   }, [currentMatrix]);
+
+  useEffect(() => {
+    if (!isLearning) {
+      setProgress(0);
+      return;
+    }
+
+    let value = 0;
+    const interval = setInterval(() => {
+      
+      value = Math.min(0.9, value + 0.02);
+      setProgress(value);
+    }, 200); 
+
+    return () => clearInterval(interval);
+  }, [isLearning]);
+
 
 
   async function beginLearning() {
@@ -488,7 +514,7 @@ function computeWeightStats(matrix) {
       };
 
       console.log("Sending learning payload:", payload);
-
+      setProgress(0);
       setIsLearning(true);
       setLearningStatus("Learning in progress…");
       const start = performance.now();            
@@ -517,6 +543,7 @@ function computeWeightStats(matrix) {
               setWHist(data.W_hist);
               setCurrentStep(data.W_hist.length - 1);
               setLearningComplete(true);
+              setProgress(1);
               markLearningRun();
               setLearningStatus(
                 `Learning complete (${data.W_hist.length} step${
@@ -638,9 +665,44 @@ function computeWeightStats(matrix) {
                         : "memories loaded"}
                     </div>
                   )}
+
+                  {/* NEW: Progress bar */}
+                  <div style={{ marginTop: 16, width: "100%" }}>
+                    <div
+                      style={{
+                        width: "100%",
+                        height: 8,
+                        borderRadius: 999,
+                        background: "rgba(255,255,255,0.12)",
+                        overflow: "hidden",
+                      }}
+                    >
+                      <div
+                        style={{
+                          height: "100%",
+                          width: `${Math.round(progress * 100)}%`,
+                          borderRadius: 999,
+                          background:
+                            "linear-gradient(90deg, #1a6fd6, #4fd1c5)",
+                          transition: "width 0.2s ease-out",
+                        }}
+                      />
+                    </div>
+                    <div
+                      style={{
+                        marginTop: 6,
+                        fontSize: 11,
+                        opacity: 0.8,
+                        textAlign: "right",
+                      }}
+                    >
+                      {Math.round(progress * 100)}%
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
+
 
       <h1 style={{ marginBottom: 24 }}>Learning Phase</h1>
 
