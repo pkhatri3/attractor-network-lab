@@ -33,17 +33,17 @@ class attractorNet(object):
             np.fill_diagonal(self.C, 1)
     # There are different ways to learn, just worry about learn_standard() 
     # for right now.
-    def learn(self, data,N,M,learn_type):
+    def learn(self, data,N,M,learn_type, return_history=True):
         if learn_type == 'standard':
-            return self.learn_standard(data,N,M)
+            return self.learn_standard(data,N,M, return_history)
         elif learn_type == 'decay':
-            return self.learn_decay(data,N,M,self.scale)
+            return self.learn_decay(data,N,M,self.scale, return_history)
         elif learn_type == 'iterative':
             return self.iterative_hebb(data,N,M)
         elif learn_type == 'store_erase_decay':
-            return self.learn_store_erase_decay(data,N,M,self.scale)
+            return self.learn_store_erase_decay(data,N,M,self.scale, return_history)
         elif learn_type == 'store_erase':
-            return self.learn_store_erase(data,N,M)
+            return self.learn_store_erase(data,N,M, return_history)
         else:
             print("invalid learn type")
             raise SystemExit(1)
@@ -81,7 +81,7 @@ class attractorNet(object):
                     
     # Standard one-shot Hebbian learning (this is what I explained in the notes
     # and you can see an example of this in learning_examples() below).
-    def learn_standard(self, data, N, M):
+    def learn_standard(self, data, N, M, return_history=True):
         W_hist = []
 
         for i in range(M):                # for each input pattern i
@@ -90,24 +90,32 @@ class attractorNet(object):
             if not self.allow_diag:
                 fill_diagonal(self.W, 0)
 
+            if return_history:
+                W_hist.append(self.W.copy())
+        
+        if not return_history:
             W_hist.append(self.W.copy())
         
         return W_hist
         
     # One-shot Hebbian learning with weight decay (ignore this for now)
-    def learn_decay(self, data, N, M, scale):
+    def learn_decay(self, data, N, M, scale, return_history=True):
         W_hist = []
 
         for i in range(M):                # for each input pattern i
             self.W = scale*self.W + self.mu*self.C*outer(data[:,i],data[:,i])
             if not self.allow_diag:
                 fill_diagonal(self.W, 0)           # zero out main diagonal
+            if return_history:
+                W_hist.append(self.W.copy())
+        
+        if not return_history:
             W_hist.append(self.W.copy())
         
         return W_hist
 
     # Store-Erase Hebbian Learning with Decay
-    def learn_store_erase_decay(self, data, N, M, scale):
+    def learn_store_erase_decay(self, data, N, M, scale, return_history=True):
         W_hist = []
         Wold = deepcopy(self.W)
         for i in range(M):
@@ -118,11 +126,15 @@ class attractorNet(object):
             Wold = deepcopy(self.W)
             if not self.allow_diag:
                 fill_diagonal(self.W, 0)
+            if return_history:
+                W_hist.append(self.W.copy())
+        
+        if not return_history:
             W_hist.append(self.W.copy())
         return W_hist
 
     # Store-Erase Hebbian Learning (NO DECAY)
-    def learn_store_erase(self, data, N, M):
+    def learn_store_erase(self, data, N, M, return_history=True):
         W_hist = []
         Wold = deepcopy(self.W)
         for i in range(M):
@@ -133,6 +145,10 @@ class attractorNet(object):
             Wold = deepcopy(self.W)
             if not self.allow_diag:
                 fill_diagonal(self.W, 0)
+            if return_history:
+                W_hist.append(self.W.copy())
+        
+        if not return_history:
             W_hist.append(self.W.copy())
         return W_hist
     
