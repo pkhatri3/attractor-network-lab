@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from typing import Optional, List
 import numpy as np
 from attractor import attractorNet
+from jax_attractor import JaxAttractorNet
 from fastapi.responses import StreamingResponse
 import asyncio
 import json
@@ -31,11 +32,13 @@ class LearnPayload(BaseModel):
     scale: float = 1.0
     rule: str = "standard"
     allow_diag: bool = False
+    backend: str = "numpy"  # "numpy" or "jax"
 
 @app.post("/learn")
 def learn(payload: LearnPayload):
     global AN
     try:
+        print(f"Received learn request. Backend: {payload.backend}, N: {payload.N}")
         #print(payload)
         if not payload.memories or not payload.memories[0]:
             return {"ok": False, "error": "memories must be a non-empty 2D list"}
@@ -52,17 +55,36 @@ def learn(payload: LearnPayload):
         C = decode_C(payload)
         scale = payload.scale
 
-        AN = attractorNet(N, C, scale, allow_diag=payload.allow_diag)
+        if payload.backend == "jax":
+            AN = JaxAttractorNet(N, C, scale, allow_diag=payload.allow_diag)
+        else:
+            AN = attractorNet(N, C, scale, allow_diag=payload.allow_diag)
+            
         if payload.learning_rate is not None:
             AN.mu = payload.learning_rate
 
-        W_hist = AN.learn(memories, N, M, payload.rule)
+        # Disable history for large N to prevent OOM
+        return_history = True
+        if N > 500:
+            print(f"N={N} > 500, disabling full history tracking.")
+            return_history = False
+
+        import time
+        t0 = time.perf_counter()
+        W_hist = AN.learn(memories, N, M, payload.rule, return_history=return_history)
+        t1 = time.perf_counter()
+        print(f"Learning took {t1-t0:.4f}s using {payload.backend}")
+
         #print("allow_diag:", payload.allow_diag)
         #print("diag sample:", np.diag(W_hist[-1])[:10])
 
         final_W = W_hist[-1]
         network_id = str(uuid4())
-        network_cache[network_id] = W_hist[-1]  # only final weights
+        # store W and backend info
+        network_cache[network_id] = {
+            "W": W_hist[-1],
+            "backend": payload.backend
+        }
 
         return {
             "ok": True,
@@ -85,14 +107,26 @@ class SimPayload(BaseModel):
 
 @app.post("/simulate_stream")
 async def simulate_stream(payload: SimPayload):
-    # Retrieve weights
-    W = network_cache[payload.network_id]
+    # Retrieve weights and backend info
+    cache_data = network_cache[payload.network_id]
+    
+    # Handle legacy cache (just W) or new cache (dict)
+    if isinstance(cache_data, dict) and "W" in cache_data:
+        W = cache_data["W"]
+        backend = cache_data.get("backend", "numpy")
+    else:
+        W = cache_data
+        backend = "numpy"
 
     # A from list to numpy array
     A = np.array(payload.A, dtype=int)
 
     # Create a new attractor network instance using cached weights
-    AN = attractorNet(len(A), np.ones((len(A), len(A))), 0)
+    if backend == "jax":
+        AN = JaxAttractorNet(len(A), np.ones((len(A), len(A))), 0)
+    else:
+        AN = attractorNet(len(A), np.ones((len(A), len(A))), 0)
+        
     AN.W = W
     if payload.update_gain is not None:
         AN.update_gain = payload.update_gain
@@ -127,6 +161,7 @@ class MemoryCapacityPayload(BaseModel):
     rule: str = "standard"
     noise_level: float = 0.1
     max_iters: int = 50
+    backend: str = "numpy"
 
 @app.post("/memory_capacity_test")
 async def memory_capacity_test(payload: MemoryCapacityPayload):
@@ -144,7 +179,11 @@ async def memory_capacity_test(payload: MemoryCapacityPayload):
             for num_patterns in range(1, M + 1):
 
                 # Create a new attractor network and apply learning rule
-                AN = attractorNet(N, C, payload.scale)
+                if payload.backend == "jax":
+                    AN = JaxAttractorNet(N, C, payload.scale)
+                else:
+                    AN = attractorNet(N, C, payload.scale)
+                    
                 if payload.learning_rate is not None:
                     AN.mu = payload.learning_rate
 
@@ -167,14 +206,17 @@ async def memory_capacity_test(payload: MemoryCapacityPayload):
 
                     # Run updates until convergence
                     AN.A = noisy.copy()
+                    
                     for _ in range(payload.max_iters):
-                        Aold = AN.A.copy()
+                        Aold = AN.A.copy() if payload.backend == "numpy" else np.array(AN.A)
                         AN.update()
-                        if np.all(AN.A == Aold):
+                        
+                        curr_A = AN.A if payload.backend == "numpy" else np.array(AN.A)
+                        if np.all(curr_A == Aold):
                             break
 
                     # Compute accuracy + success
-                    recalled = AN.A.copy()
+                    recalled = AN.A if payload.backend == "numpy" else np.array(AN.A)
                     matches = np.sum(recalled == original)
                     accuracy = matches / N
                     success = (matches == N)
