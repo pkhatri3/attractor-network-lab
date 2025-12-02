@@ -40,6 +40,8 @@ export default function LearningPhase() {
     learningColorScheme,
     setLearningColorScheme,
     setNetworkId,
+    backend,
+    setBackend,
   } = useContext(LearningContext);
 
   // Local UI state
@@ -508,6 +510,7 @@ function computeWeightStats(matrix) {
         scale,
         rule,
         allow_diag: allowDiagonal,
+        backend,
         view_layout: layoutChoice
           ? { rows: layoutChoice.rows, cols: layoutChoice.cols }
           : null,
@@ -958,6 +961,23 @@ function computeWeightStats(matrix) {
                     </option>
                     <option style={{ color: "#000" }} value="store_erase_decay">
                       Store–Erase (with decay)
+                    </option>
+                  </select>
+                </div>
+
+                {/* Backend */}
+                <div style={{ marginTop: 10 }}>
+                  <label style={styles.label}>Backend:</label>
+                  <select
+                    value={backend}
+                    onChange={(e) => setBackend(e.target.value)}
+                    style={styles.input}
+                  >
+                    <option style={{ color: "#000" }} value="numpy">
+                      NumPy (Standard)
+                    </option>
+                    <option style={{ color: "#000" }} value="jax">
+                      JAX (Accelerated)
                     </option>
                   </select>
                 </div>
