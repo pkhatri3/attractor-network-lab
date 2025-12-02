@@ -950,18 +950,24 @@ function computeWeightStats(matrix) {
                     <option style={{ color: "#000" }} value="standard">
                       Standard
                     </option>
-                    <option style={{ color: "#000" }} value="iterative">
-                      Iterative
-                    </option>
+                    {backend !== 'jax' && (
+                      <option style={{ color: "#000" }} value="iterative">
+                        Iterative
+                      </option>
+                    )}
                     <option style={{ color: "#000" }} value="decay">
                       Decay
                     </option>
-                    <option style={{ color: "#000" }} value="store_erase">
-                      Store–Erase
-                    </option>
-                    <option style={{ color: "#000" }} value="store_erase_decay">
-                      Store–Erase (with decay)
-                    </option>
+                    {backend !== 'jax' && (
+                      <>
+                        <option style={{ color: "#000" }} value="store_erase">
+                          Store–Erase
+                        </option>
+                        <option style={{ color: "#000" }} value="store_erase_decay">
+                          Store–Erase (with decay)
+                        </option>
+                      </>
+                    )}
                   </select>
                 </div>
 
@@ -970,7 +976,16 @@ function computeWeightStats(matrix) {
                   <label style={styles.label}>Backend:</label>
                   <select
                     value={backend}
-                    onChange={(e) => setBackend(e.target.value)}
+                    onChange={(e) => {
+                      const newBackend = e.target.value;
+                      setBackend(newBackend);
+                      if (
+                        newBackend === "jax" &&
+                        ["iterative", "store_erase", "store_erase_decay"].includes(rule)
+                      ) {
+                        setRule("standard");
+                      }
+                    }}
                     style={styles.input}
                   >
                     <option style={{ color: "#000" }} value="numpy">
