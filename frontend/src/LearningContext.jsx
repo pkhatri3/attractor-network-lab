@@ -17,6 +17,8 @@ export function LearningProvider({ children }) {
     () => localStorage.getItem("nme:cmap") || "blueWhiteRed"
   );
   const [networkId, setNetworkId] = useState(null);
+  const [backend, setBackend] = useState("numpy");
+
   useEffect(() => {
     localStorage.setItem("nme:cmap", learningColorScheme);
   }, [learningColorScheme]);
@@ -49,8 +51,8 @@ export function LearningProvider({ children }) {
         learningComplete, setLearningComplete,
         learningRunVersion, markLearningRun,
         learningColorScheme, setLearningColorScheme,
-        learningColorScheme, setLearningColorScheme,
         networkId, setNetworkId,
+        backend, setBackend,
       }}
     >
       {children}
