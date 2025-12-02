@@ -28,3 +28,6 @@ frontend/dist/
 .cache/
 .next/
 out/
+
+venv/
+__pycache__/
