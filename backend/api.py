@@ -104,6 +104,7 @@ class SimPayload(BaseModel):
     network_id: str
     update_type: str = "standard"
     update_gain: Optional[float] = None
+    granular: bool = False
 
 @app.post("/simulate_stream")
 async def simulate_stream(payload: SimPayload):
@@ -134,12 +135,19 @@ async def simulate_stream(payload: SimPayload):
     # Each iteration, yields one message
     async def event_gen():
         try:
-            for state in AN.simulate_iter(A, payload.max_iters, update_type=payload.update_type):
+            # Pass granular flag to both backends
+            kwargs = {}
+            kwargs['granular'] = payload.granular
+
+            for state in AN.simulate_iter(A, payload.max_iters, update_type=payload.update_type, **kwargs):
                 # Stream timestep, energy, and activations to the frontend
                 yield f"data: {json.dumps(state)}\n\n"
 
-                
-                await asyncio.sleep(0.05)
+                if payload.granular:
+                    # Faster updates for granular to keep animation smooth but visible
+                    await asyncio.sleep(0.02)
+                else:
+                    await asyncio.sleep(0.05)
 
             
             yield "data: {\"done\": true}\n\n"

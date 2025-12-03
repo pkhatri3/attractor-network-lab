@@ -213,7 +213,7 @@ class attractorNet(object):
     def energy(self):  # Returns network's energy E
         return -0.5 * dot(self.A,dot(self.W,self.A))
 
-    def simulate_iter(self, Ainit, max_iters=101, update_type='standard'):
+    def simulate_iter(self, Ainit, max_iters=101, update_type='standard', granular=False):
         t = 0
         self.A = deepcopy(Ainit)
         self.A = np.array(self.A, dtype=np.float64)
@@ -226,15 +226,37 @@ class attractorNet(object):
 
         while moretodo and t < max_iters:
             t += 1
-            self.update(update_type)
-            self.E = self.energy()
+            
+            if granular and update_type == 'standard':
+                indices = random.permutation(self.N)
+                changed_any = False
+                
+                for i in indices:
+                    scalprod = dot(self.W[i,:],self.A)
+                    new_val = sgn(scalprod,self.A[i])
+                    
+                    # check if changed
+                    if new_val != self.A[i]:
+                        self.A[i] = new_val
+                        changed_any = True
+                        
+                        self.E = self.energy()
+                        A_binary = np.sign(self.A) + (self.A == 0)
+                        yield {"t": t, "E": float(self.E), "A": A_binary.tolist()}
+                
+                if not changed_any:
+                    moretodo = False
+                    
+            else:
+                self.update(update_type)
+                self.E = self.energy()
 
-            A_binary = np.sign(self.A) + (self.A == 0)
-            yield {"t": t, "E": float(self.E), "A": A_binary.tolist()}  # Every step
+                A_binary = np.sign(self.A) + (self.A == 0)
+                yield {"t": t, "E": float(self.E), "A": A_binary.tolist()}
 
-            if all(A_binary == Aold):   # Fixed point reached
-                moretodo = False
-            Aold = deepcopy(A_binary)
+                if all(A_binary == Aold):
+                    moretodo = False
+                Aold = deepcopy(A_binary)
 
 
 def learning_example():
