@@ -36,7 +36,9 @@ const ActivationLayout = ({
     setAvec,
     AHist,
     iter,
-    energyHist
+    energyHist,
+    granularMode,
+    setGranularMode
   }) => (
     <div style={{ width: "100%", paddingTop: "60px", display: "flex", flexDirection: "column", gap: 20, pointerEvents: "auto", zIndex: 1 }}>
       
@@ -91,6 +93,17 @@ const ActivationLayout = ({
             >
               Matrix
             </button>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "#eaf4ff" }}>
+            <input
+              type="checkbox"
+              checked={granularMode}
+              onChange={(e) => setGranularMode(e.target.checked)}
+              disabled={isSimulating || hasRun}
+              style={{ cursor: "pointer" }}
+            />
+            <span>Granular Updates</span>
           </div>
 
           <button
@@ -823,6 +836,7 @@ export default function SimulationPhase() {
   const [showMemories, setShowMemories] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerWidth, setDrawerWidth] = useState(350); // px
+  const [granularMode, setGranularMode] = useState(true);
 
   const handleDrawerResizeStart = (e) => {
   e.preventDefault();
@@ -1121,6 +1135,7 @@ export default function SimulationPhase() {
           A: Avec,
           network_id: networkId,
           max_iters: 200,
+          granular: granularMode,
         }),
         signal: controller.signal,
       });
@@ -1329,6 +1344,8 @@ export default function SimulationPhase() {
               AHist={AHist}
               iter={iter}
               energyHist={energyHist}
+              granularMode={granularMode}
+              setGranularMode={setGranularMode}
             />
           </div>
 

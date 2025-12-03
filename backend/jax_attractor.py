@@ -28,6 +28,22 @@ def update_step(A, W, rand_indices):
     return A_new
 
 @jit
+def update_step_granular(A, W, rand_indices):
+    def f(A_curr, i):
+        in_i = jnp.dot(W[i, :], A_curr)
+        s = jnp.sign(in_i)
+        new_val = jnp.where(s == 0, A_curr[i], s)
+        new_val = new_val.astype(A_curr.dtype)
+        
+        changed = new_val != A_curr[i]
+        A_next = A_curr.at[i].set(new_val)
+        
+        return A_next, (A_next, changed)
+
+    A_final, (A_stack, changed_stack) = lax.scan(f, A, rand_indices)
+    return A_final, A_stack, changed_stack
+
+@jit
 def learn_standard_scan(W_init, C, data, mu, allow_diag):
     N = W_init.shape[0]
     M = data.shape[1]
@@ -121,7 +137,7 @@ class JaxAttractorNet:
             # Return list with just the final weight matrix
             return [np.array(self.W)]
 
-    def simulate_iter(self, Ainit, max_iters=101, update_type='standard'):
+    def simulate_iter(self, Ainit, max_iters=101, update_type='standard', granular=False):
         self.A = jnp.array(Ainit)
         t = 0
         self.E = compute_energy(self.A, self.W)
@@ -140,13 +156,26 @@ class JaxAttractorNet:
             key, subkey = random.split(key)
             rand_indices = random.permutation(subkey, self.N)
             
-            self.A = update_step(self.A, self.W, rand_indices)
-            self.E = compute_energy(self.A, self.W)
+            if granular and update_type == 'standard':
+                self.A, A_stack, changed_stack = update_step_granular(self.A, self.W, rand_indices)
+                
+                # convert to numpy to iterate
+                A_stack_np = np.array(A_stack)
+                changed_stack_np = np.array(changed_stack)
+                
+                # get the intermediate states
+                for i in range(self.N):
+                    if changed_stack_np[i]:
+                        curr_A = A_stack_np[i]
+                        E_curr = compute_energy(jnp.array(curr_A), self.W)
+                        yield {"t": t, "E": float(E_curr), "A": curr_A.astype(int).tolist()}
+            else:
+                self.A = update_step(self.A, self.W, rand_indices)
+                self.E = compute_energy(self.A, self.W)
+                
+                # get the current state
+                yield {"t": t, "E": float(self.E), "A": np.array(self.A, dtype=int).tolist()}
             
-            # get the current state
-            yield {"t": t, "E": float(self.E), "A": np.array(self.A, dtype=int).tolist()}
-            
-            # check convergence
             if jnp.all(self.A == Aold):
                 moretodo = False
             
