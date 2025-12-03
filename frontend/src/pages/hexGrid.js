@@ -9,7 +9,7 @@ export function addHexLikeGrid({
   spacing = 50,
   nodeSize = 4,
   nextId,
-  caps = true,         // <— NEW: add half-columns at both ends
+  caps = false,
   connectionProb,
 }) {
   const dx = spacing;                   // horizontal pitch between same-row neighbors

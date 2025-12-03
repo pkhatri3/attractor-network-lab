@@ -862,7 +862,7 @@ export default function GraphCanvas({
               nodeSize: nodeSizeRef.current,
               nextId,
               connectionProb: parseFloat(connectionProbRef.current) || 100,
-              caps: true,
+              caps: false,
             }); 
             // snap any new nodes to grid if needed
             snapNewNodesIfGrid({ graph, sigma, beforeSet: before, gridMode: gridRef.current });
@@ -1085,7 +1085,7 @@ export default function GraphCanvas({
                 spacing: TEMPLATE_SPACING_GU,
                 nodeSize: nodeSizeRef.current,
                 nextId,
-                caps: true,
+                caps: false,
               });
             } else {
               
