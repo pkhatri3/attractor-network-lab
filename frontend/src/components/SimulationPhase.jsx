@@ -287,6 +287,8 @@ const ActivationLayout = ({
 const CapacityLayout = ({
     capacityNoiseLevel,
     setCapacityNoiseLevel,
+    capacityIterations,
+    setCapacityIterations,
     capacityTestActive,
     capacityResults,
     handleRunCapacityTest,
@@ -314,6 +316,20 @@ const CapacityLayout = ({
             step={0.01}
             value={capacityNoiseLevel}
             onChange={e => setCapacityNoiseLevel(Number(e.target.value))}
+            disabled={capacityTestActive}
+            style={{ width: "100%" }}
+          />
+        </div>
+
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontSize: 13, marginBottom: 6 }}>Iterations per Point: {capacityIterations}</div>
+          <input
+            type="range"
+            min={1}
+            max={20}
+            step={1}
+            value={capacityIterations}
+            onChange={e => setCapacityIterations(Number(e.target.value))}
             disabled={capacityTestActive}
             style={{ width: "100%" }}
           />
@@ -819,6 +835,7 @@ export default function SimulationPhase() {
     iter, setIter,
     capacityResults, setCapacityResults,
     capacityNoiseLevel, setCapacityNoiseLevel,
+    capacityIterations, setCapacityIterations,
     capacityTestActive, setCapacityTestActive,
     simulationNoiseLevel, setSimulationNoiseLevel,
     initialA, setInitialA,
@@ -937,6 +954,7 @@ export default function SimulationPhase() {
         rule: "standard",
         noise_level: capacityNoiseLevel,
         max_iters: 50,
+        iterations: capacityIterations,
       };
 
       const res = await fetch(`${API_URL}/memory_capacity_test`, {
@@ -1357,6 +1375,8 @@ export default function SimulationPhase() {
             <CapacityLayout
               capacityNoiseLevel={capacityNoiseLevel}
               setCapacityNoiseLevel={setCapacityNoiseLevel}
+              capacityIterations={capacityIterations}
+              setCapacityIterations={setCapacityIterations}
               capacityTestActive={capacityTestActive}
               capacityResults={capacityResults}
               handleRunCapacityTest={handleRunCapacityTest}
