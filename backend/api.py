@@ -169,6 +169,7 @@ class MemoryCapacityPayload(BaseModel):
     rule: str = "standard"
     noise_level: float = 0.1
     max_iters: int = 50
+    iterations: int = 1
     backend: str = "numpy"
 
 @app.post("/memory_capacity_test")
@@ -184,6 +185,7 @@ async def memory_capacity_test(payload: MemoryCapacityPayload):
             C = decode_C(payload)
 
             # Test capacity from 1 pattern up to M patterns
+            print(f"Starting capacity test. Total patterns: {M}, Iterations per point: {payload.iterations}")
             for num_patterns in range(1, M + 1):
 
                 # Create a new attractor network and apply learning rule
@@ -199,50 +201,50 @@ async def memory_capacity_test(payload: MemoryCapacityPayload):
                 data_subset = memories_arr[:, :num_patterns]
                 AN.learn(data_subset, N, num_patterns, payload.rule)
 
-                recalls = []
-                success_count = 0
-
-                # Test recall for each stored memory
-                for p_idx in range(num_patterns):
-                    original = memories_arr[:, p_idx].copy()
-
-                    # Add noise by flipping a % of bits
-                    noisy = original.copy()
-                    num_flips = max(1, int(N * payload.noise_level))
-                    flip_idxs = np.random.choice(N, size=num_flips, replace=False)
-                    noisy[flip_idxs] *= -1
-
-                    # Run updates until convergence
-                    AN.A = noisy.copy()
+                total_success_count = 0
+                
+                # Run the test 'iterations' times to get an average
+                for iter_idx in range(payload.iterations):
+                    current_run_success_count = 0
                     
-                    for _ in range(payload.max_iters):
-                        Aold = AN.A.copy() if payload.backend == "numpy" else np.array(AN.A)
-                        AN.update()
+                    # Test recall for each stored memory
+                    for p_idx in range(num_patterns):
+                        original = memories_arr[:, p_idx].copy()
+
+                        # Add noise by flipping a % of bits
+                        noisy = original.copy()
+                        num_flips = max(1, int(N * payload.noise_level))
+                        flip_idxs = np.random.choice(N, size=num_flips, replace=False)
+                        noisy[flip_idxs] *= -1
+
+                        # Run updates until convergence
+                        AN.A = noisy.copy()
                         
-                        curr_A = AN.A if payload.backend == "numpy" else np.array(AN.A)
-                        if np.all(curr_A == Aold):
-                            break
+                        for _ in range(payload.max_iters):
+                            Aold = AN.A.copy() if payload.backend == "numpy" else np.array(AN.A)
+                            AN.update()
+                            
+                            curr_A = AN.A if payload.backend == "numpy" else np.array(AN.A)
+                            if np.all(curr_A == Aold):
+                                break
 
-                    # Compute accuracy + success
-                    recalled = AN.A if payload.backend == "numpy" else np.array(AN.A)
-                    matches = np.sum(recalled == original)
-                    accuracy = matches / N
-                    success = (matches == N)
-                    if success:
-                        success_count += 1
+                        # Compute accuracy + success
+                        recalled = AN.A if payload.backend == "numpy" else np.array(AN.A)
+                        matches = np.sum(recalled == original)
+                        success = (matches == N)
+                        if success:
+                            current_run_success_count += 1
+                    
+                    print(f"Patterns: {num_patterns}, Iteration: {iter_idx+1}/{payload.iterations}, Successes: {current_run_success_count}")
+                    total_success_count += current_run_success_count
 
-                    recalls.append({
-                        "pattern_idx": int(p_idx),
-                        "accuracy": float(accuracy),
-                        "converged": bool(success),
-                        "success": bool(success),
-                    })
-
+                avg_success_count = total_success_count / payload.iterations
+                print(f"Patterns: {num_patterns}, Average Success: {avg_success_count}")
                 
                 msg = {
                     "num_patterns": int(num_patterns),
-                    "success_count": int(success_count),
-                    "recalls": recalls,
+                    "success_count": float(avg_success_count),
+                    "recalls": [], # Recalls detail omitted for averaged runs
                 }
 
                 
