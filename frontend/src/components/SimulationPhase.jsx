@@ -16,9 +16,16 @@ import {
 } from "recharts";
 import { getColormap } from "../components/Learningcolormaps";
 import { encodeMatrixToBase64 } from "../utils/ioUtils";
+import {
+  generateCapacityReportPdf,
+  generateRecallReportPdf,
+} from "./reportGenerator";
+
 
 
 const API_URL = import.meta.env.VITE_API_URL;
+
+  
 
 const ActivationLayout = ({
     inputMode,
@@ -219,7 +226,7 @@ const ActivationLayout = ({
         <h3 style={{ marginTop: 0 }}>Network Energy</h3>
 
         {energyHist.length ? (
-          <div style={{ width: "100%", height: 250 }}>
+          <div style={{ width: "100%", height: 250, minWidth: 0, minHeight: 200 }}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
                 data={energyHist.map((E, t) => ({ t, E }))}
@@ -453,6 +460,8 @@ const CapacityLayout = ({
   simulationMode,
   canSimulate,
   generateNoisyInput,
+  onWeightsCanvasReady,
+  
 }) => (
   <div
     style={{
@@ -504,6 +513,7 @@ const CapacityLayout = ({
               matrix={finalW}
               size={300}
               cmapName={learningColorScheme || "blueWhiteRed"}
+              onCanvasReady={onWeightsCanvasReady}
             />
           ) : (
             <p>No weights available.</p>
@@ -662,11 +672,11 @@ const CapacityLayout = ({
   </div>
 );
 
-function WeightsCanvas({ matrix, size = 500, scaleFactor = 2, cmapName = "blueWhiteRed" }) {
+function WeightsCanvas({ matrix, size = 500, scaleFactor = 2, cmapName = "blueWhiteRed",onCanvasReady }) {
   const canvasRef = React.useRef();
   const [showNumbers, setShowNumbers] = React.useState(true);
   const cmapInfo = React.useMemo(() => getColormap(cmapName), [cmapName]);
-  const lut = cmapInfo.lut; // array of [r,g,b] length 256
+  const lut = cmapInfo.lut; 
   React.useEffect(() => {
     if (!matrix || !matrix.length || !matrix[0].length) return;
 
@@ -767,6 +777,10 @@ function WeightsCanvas({ matrix, size = 500, scaleFactor = 2, cmapName = "blueWh
         }
       }
     }
+
+    if (onCanvasReady && canvas) {
+      onCanvasReady(canvas);
+    }
   }, [matrix, size, scaleFactor, showNumbers, cmapInfo]);
 
   const downloadAsPNG = () => {
@@ -825,6 +839,7 @@ export default function SimulationPhase() {
     learningRunVersion,
     learningColorScheme,
     networkId,
+    rule,
   } = useContext(LearningContext);
 
   const {
@@ -854,6 +869,23 @@ export default function SimulationPhase() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerWidth, setDrawerWidth] = useState(350); // px
   const [granularMode, setGranularMode] = useState(true);
+  const [experimentName, setExperimentName] = useState("");
+  const [activationRule, setActivationRule] = useState("");
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportExperimentInput, setReportExperimentInput] = useState("");
+  const [reportFileNameInput, setReportFileNameInput] = useState("");
+  const weightsCanvasRef = useRef(null);
+  const capacityChartRef = useRef(null);
+
+    const getParsedMemories = () => {
+    try {
+      if (Array.isArray(memories)) return memories;
+      return JSON.parse(memories || "[]");
+    } catch {
+      return [];
+    }
+  };
+
 
   const handleDrawerResizeStart = (e) => {
   e.preventDefault();
@@ -1242,6 +1274,145 @@ export default function SimulationPhase() {
     parsedMems = [];
   }
 
+    const computeWeightStatsForReport = (matrix) => {
+      if (!matrix || !matrix.length || !matrix[0].length) return null;
+      const rows = matrix.length;
+      const cols = matrix[0].length;
+      const total = rows * cols;
+
+      let min = Infinity;
+      let max = -Infinity;
+      let sum = 0;
+      let sumSq = 0;
+      let pos = 0;
+      let neg = 0;
+      let zero = 0;
+
+      for (let r = 0; r < rows; r++) {
+        const row = matrix[r];
+        for (let c = 0; c < cols; c++) {
+          const v = row[c];
+          if (v < min) min = v;
+          if (v > max) max = v;
+          sum += v;
+          sumSq += v * v;
+          if (v > 0) pos++;
+          else if (v < 0) neg++;
+          else zero++;
+        }
+      }
+
+      const mean = sum / total;
+      const variance = sumSq / total - mean * mean;
+      const std = Math.sqrt(Math.max(0, variance));
+
+      return {
+        min,
+        max,
+        mean,
+        std,
+        posPct: (pos / total) * 100,
+        negPct: (neg / total) * 100,
+        zeroPct: (zero / total) * 100,
+      };
+    };
+
+    const handleGenerateReport = async (overrideName) => {
+        const parsedMemories = getParsedMemories();
+        const memCountForSummary = Array.isArray(parsedMemories)
+          ? parsedMemories.length
+          : 0;
+
+        const finalName = overrideName || experimentName || "Untitled Experiment";
+
+        if (simulationMode === "capacity") {
+          const learningInfo = {
+            rule: rule || "Standard Hebbian",
+            learningRate: 0.25,
+            numNeurons: neuronCount,
+            numMemories: memCountForSummary,
+            colorMap: learningColorScheme || "blueWhiteRed",
+          };
+
+          await generateCapacityReportPdf({
+            experimentName: finalName,
+            activationRule,
+            capacityNoiseLevel,
+            capacityResults,
+            weightsCanvas: weightsCanvasRef.current,
+            chartElement: capacityChartRef.current,
+            finalW,
+            learningInfo,
+          });
+        } else {
+          await generateRecallReportPdf({
+            experimentName: finalName,
+            activationRule,
+            AHist,
+            Avec,
+            energyHist,
+          });
+        }
+      };
+
+
+
+    const confirmReportNameAndGenerate = () => {
+      const finalExperimentName =
+        reportExperimentInput.trim() || experimentName || "Untitled Experiment";
+
+      const defaultFileBase =
+        simulationMode === "capacity"
+          ? "memory_capacity_report"
+          : "memory_recall_report";
+
+      const finalFileName =
+        reportFileNameInput.trim().length > 0
+          ? reportFileNameInput.trim()
+          : defaultFileBase;
+
+      setExperimentName(finalExperimentName);
+      setShowReportModal(false);
+
+      if (simulationMode === "capacity") {
+        const parsedMemories = getParsedMemories();
+        const memCountForSummary = Array.isArray(parsedMemories)
+          ? parsedMemories.length
+          : 0;
+
+        const learningInfo = {
+          rule: rule || "Standard Hebbian",
+          learningRate: 0.25,
+          numNeurons: neuronCount,
+          numMemories: memCountForSummary,
+          colorMap: learningColorScheme || "blueWhiteRed",
+        };
+
+        generateCapacityReportPdf({
+          experimentName: finalExperimentName,
+          activationRule,
+          capacityNoiseLevel,
+          capacityResults,
+          finalW,
+          learningInfo,
+          fileName: finalFileName,
+        });
+      } else {
+        generateRecallReportPdf({
+          experimentName: finalExperimentName,
+          activationRule,
+          AHist,
+          Avec,
+          energyHist,
+          fileName: finalFileName,
+        });
+      }
+    };
+
+
+
+
+
     return (
     <div
       style={{
@@ -1397,7 +1568,43 @@ export default function SimulationPhase() {
             >
               {error}
             </div>
+            
           )}
+          <div
+            style={{
+              width: "97%",
+              marginTop: 30,
+              marginBottom: 40,
+              display: "flex",
+              justifyContent: "center",
+            }}
+          >
+            <button
+              onClick={() => {
+                setReportExperimentInput(experimentName || "");
+                setReportFileNameInput(
+                  simulationMode === "capacity"
+                    ? "memory_capacity_report"
+                    : "memory_recall_report"
+                );
+                setShowReportModal(true);
+              }}
+              style={{
+                width: 320,
+                padding: "12px 16px",
+                borderRadius: 10,
+                border: "1px solid rgba(255,255,255,0.18)",
+                background: "#1a6fd6",
+                color: "#fff",
+                fontWeight: 600,
+                boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
+                cursor: "pointer",
+              }}
+            >
+              Generate Report PDF
+            </button>
+
+          </div>
         </div>
 
         {/* resizer + drawer */}
@@ -1442,10 +1649,129 @@ export default function SimulationPhase() {
               simulationMode={simulationMode}
               canSimulate={canSimulate}
               generateNoisyInput={generateNoisyInput}
+              onWeightsCanvasReady={(canvas) => {
+                weightsCanvasRef.current = canvas;
+              }}
             />
           </div>
         )}
       </div>
+        {showReportModal && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.6)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 50,
+            }}
+          >
+            <div
+              style={{
+                width: 420,
+                maxWidth: "90%",
+                background: "rgba(20,20,26,0.98)",
+                borderRadius: 16,
+                padding: 24,
+                border: "1px solid rgba(255,255,255,0.18)",
+                boxShadow: "0 18px 45px rgba(0,0,0,0.55)",
+                color: "#eaf4ff",
+              }}
+            >
+              <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>
+                Name this experiment and file
+              </div>
+
+              <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 14 }}>
+                The experiment name appears in the PDF. The file name is used when saving.
+              </div>
+
+              <label style={{ fontSize: 12, opacity: 0.85 }}>
+                Experiment Name
+              </label>
+              <input
+                type="text"
+                value={reportExperimentInput}
+                onChange={(e) => setReportExperimentInput(e.target.value)}
+                placeholder="e.g., Experiment -1"
+                style={{
+                  width: "100%",
+                  padding: 10,
+                  borderRadius: 8,
+                  border: "1px solid rgba(255,255,255,0.18)",
+                  background: "rgba(0,0,0,0.4)",
+                  color: "#eaf4ff",
+                  marginBottom: 14,
+                }}
+              />
+
+              <label style={{ fontSize: 12, opacity: 0.85 }}>
+                File Name (without or with .pdf)
+              </label>
+              <input
+                type="text"
+                value={reportFileNameInput}
+                onChange={(e) => setReportFileNameInput(e.target.value)}
+                placeholder={
+                  simulationMode === "capacity"
+                    ? "memory_capacity_report"
+                    : "memory_recall_report"
+                }
+                style={{
+                  width: "100%",
+                  padding: 10,
+                  borderRadius: 8,
+                  border: "1px solid rgba(255,255,255,0.18)",
+                  background: "rgba(0,0,0,0.4)",
+                  color: "#eaf4ff",
+                  marginBottom: 18,
+                }}
+              />
+
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: 10,
+                }}
+              >
+                <button
+                  onClick={() => setShowReportModal(false)}
+                  style={{
+                    padding: "8px 12px",
+                    borderRadius: 8,
+                    border: "1px solid rgba(255,255,255,0.2)",
+                    background: "transparent",
+                    color: "#eaf4ff",
+                    fontSize: 13,
+                    cursor: "pointer",
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmReportNameAndGenerate}
+                  style={{
+                    padding: "8px 14px",
+                    borderRadius: 8,
+                    border: "none",
+                    background: "#1a6fd6",
+                    color: "#fff",
+                    fontWeight: 600,
+                    fontSize: 13,
+                    cursor: "pointer",
+                  }}
+                >
+                  Generate PDF
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+
     </div>
   );
 }

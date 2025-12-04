@@ -741,7 +741,7 @@ function computeWeightStats(matrix) {
 
                   <div style={styles.sectionPill}>
                     {memCount} {memCount === 1 ? "memory" : "memories"}
-                    {memWidth > 0 && <> • {memWidth} bits</>}
+                    {memWidth > 0 && <> • {memWidth} nodes</>}
                   </div>
                 </div>
 
