@@ -274,6 +274,7 @@ export default function GraphCanvas({
   rectCols,
   hexRows,
   hexCols,
+  hexRadius,
   onClearGraph,
   onGraphRefs,
   objectType,
@@ -303,6 +304,7 @@ export default function GraphCanvas({
   const rectColsRef = useRef(rectCols);
   const hexRowsRef = useRef(hexRows);
   const hexColsRef = useRef(hexCols);
+  const hexRadiusRef = useRef(hexRadius);
 
   const objectTypeRef = useRef(objectType);
   const selectedTemplateRef = useRef(selectedTemplate);
@@ -324,6 +326,7 @@ export default function GraphCanvas({
   useEffect(() => void (rectColsRef.current = rectCols), [rectCols]);
   useEffect(() => void (hexRowsRef.current = hexRows), [hexRows]);
   useEffect(() => void (hexColsRef.current = hexCols), [hexCols]);
+  useEffect(() => void (hexRadiusRef.current = hexRadius), [hexRadius]);
   useEffect(() => void (objectTypeRef.current = objectType), [objectType]);
   useEffect(() => void (selectedTemplateRef.current = selectedTemplate), [selectedTemplate]);
   useEffect(() => void (customTemplatesRef.current = customTemplates), [customTemplates]);
@@ -850,6 +853,7 @@ export default function GraphCanvas({
         } else if (name.includes("Hexagonal")) {
           const rows = Math.max(1, parseInt(hexRowsRef.current || "4", 10));
           const cols = Math.max(1, parseInt(hexColsRef.current || "6", 10));
+          const radius = Math.max(1, parseInt(hexRadiusRef.current || "1", 10));
           const before = new Set(graph.nodes());
           withPositionWrites(() => { 
             addHexLikeGrid({
@@ -863,6 +867,7 @@ export default function GraphCanvas({
               nextId,
               connectionProb: parseFloat(connectionProbRef.current) || 100,
               caps: false,
+              radius,
             }); 
             // snap any new nodes to grid if needed
             snapNewNodesIfGrid({ graph, sigma, beforeSet: before, gridMode: gridRef.current });
@@ -1076,6 +1081,7 @@ export default function GraphCanvas({
             } else if (nameLocal.includes("Hexagonal")) {
               const rows = Math.max(1, parseInt(hexRowsRef.current || "4", 10));
               const cols = Math.max(1, parseInt(hexColsRef.current || "6", 10));
+              const radius = Math.max(1, parseInt(hexRadiusRef.current || "1", 10));
               addHexLikeGrid({
                 graph,
                 cx: p.x,
@@ -1085,7 +1091,9 @@ export default function GraphCanvas({
                 spacing: TEMPLATE_SPACING_GU,
                 nodeSize: nodeSizeRef.current,
                 nextId,
+                connectionProb: parseFloat(connectionProbRef.current) || 100,
                 caps: false,
+                radius,
               });
             } else {
               

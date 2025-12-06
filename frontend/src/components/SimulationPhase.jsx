@@ -335,6 +335,8 @@ const CapacityLayout = ({
     setCapacityNoiseLevel,
     capacityIterations,
     setCapacityIterations,
+    capacityErrorTolerance,
+    setCapacityErrorTolerance,
     capacityTestActive,
     capacityResults,
     handleRunCapacityTest,
@@ -379,6 +381,23 @@ const CapacityLayout = ({
             disabled={capacityTestActive}
             style={{ width: "100%" }}
           />
+        </div>
+
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontSize: 13, marginBottom: 6 }}>Error Tolerance: {(capacityErrorTolerance * 100).toFixed(0)}%</div>
+          <input
+            type="range"
+            min={0}
+            max={0.5}
+            step={0.01}
+            value={capacityErrorTolerance}
+            onChange={e => setCapacityErrorTolerance(Number(e.target.value))}
+            disabled={capacityTestActive}
+            style={{ width: "100%" }}
+          />
+          <div style={{ fontSize: 11, color: "#888", marginTop: 4 }}>
+            Recalls with up to {(capacityErrorTolerance * 100).toFixed(0)}% mismatched bits will be counted as successful
+          </div>
         </div>
 
         <button
@@ -910,6 +929,9 @@ export default function SimulationPhase() {
     learningColorScheme,
     networkId,
     rule,
+    learningRate,
+    scale,
+    backend,
   } = useContext(LearningContext);
 
   const {
@@ -921,6 +943,7 @@ export default function SimulationPhase() {
     capacityResults, setCapacityResults,
     capacityNoiseLevel, setCapacityNoiseLevel,
     capacityIterations, setCapacityIterations,
+    capacityErrorTolerance, setCapacityErrorTolerance,
     capacityTestActive, setCapacityTestActive,
     simulationNoiseLevel, setSimulationNoiseLevel,
     initialA, setInitialA,
@@ -940,7 +963,7 @@ export default function SimulationPhase() {
   const [drawerWidth, setDrawerWidth] = useState(350); // px
   const [granularMode, setGranularMode] = useState(true);
   const [experimentName, setExperimentName] = useState("");
-  const [activationRule, setActivationRule] = useState("");
+  const [activationRule, setActivationRule] = useState("Discrete");
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportExperimentInput, setReportExperimentInput] = useState("");
   const [reportFileNameInput, setReportFileNameInput] = useState("");
@@ -1057,8 +1080,10 @@ export default function SimulationPhase() {
         scale: 1.0,
         rule: "standard",
         noise_level: capacityNoiseLevel,
+        error_tolerance: capacityErrorTolerance,
         max_iters: 50,
         iterations: capacityIterations,
+        update_type: getUpdateType(activationRule),
       };
 
       const res = await fetch(`${API_URL}/memory_capacity_test`, {
@@ -1252,6 +1277,17 @@ export default function SimulationPhase() {
   const canSimulate =
     neuronCount > 0 && Avec.length === neuronCount && WHist?.length;
 
+  // Map activation rule dropdown values to backend update types
+  const getUpdateType = (rule) => {
+    const mapping = {
+      "Discrete": "standard",
+      "Continuous": "continuous",
+      "Discrete-EF": "ef",
+      "Continuous-EF": "continuous_ef",
+    };
+    return mapping[rule] || "standard";
+  };
+
   async function onStartSimulation() {
     if (!canSimulate) return;
     setError(null);
@@ -1275,6 +1311,7 @@ export default function SimulationPhase() {
           network_id: networkId,
           max_iters: 200,
           granular: granularMode,
+          update_type: getUpdateType(activationRule),
         }),
         signal: controller.signal,
       });
@@ -1432,7 +1469,9 @@ export default function SimulationPhase() {
         if (simulationMode === "capacity") {
           const learningInfo = {
             rule: rule || "Standard Hebbian",
-            learningRate: 0.25,
+            learningRate: learningRate || 0.25,
+            scale: scale || 1.0,
+            backend: backend || "numpy",
             numNeurons: neuronCount,
             numMemories: memCountForSummary,
             colorMap: learningColorScheme || "blueWhiteRed",
@@ -1442,6 +1481,7 @@ export default function SimulationPhase() {
             experimentName: finalName,
             activationRule,
             capacityNoiseLevel,
+            capacityErrorTolerance,
             capacityResults,
             weightsCanvas: weightsCanvasRef.current,
             chartElement: capacityChartRef.current,
@@ -1486,7 +1526,9 @@ export default function SimulationPhase() {
 
         const learningInfo = {
           rule: rule || "Standard Hebbian",
-          learningRate: 0.25,
+          learningRate: learningRate || 0.25,
+          scale: scale || 1.0,
+          backend: backend || "numpy",
           numNeurons: neuronCount,
           numMemories: memCountForSummary,
           colorMap: learningColorScheme || "blueWhiteRed",
@@ -1496,6 +1538,7 @@ export default function SimulationPhase() {
           experimentName: finalExperimentName,
           activationRule,
           capacityNoiseLevel,
+          capacityErrorTolerance,
           capacityResults,
           finalW,
           learningInfo,
@@ -1616,6 +1659,91 @@ export default function SimulationPhase() {
             transition: "margin-right 0.25s ease",
           }}
         >
+          {/* Experiment Name and Activation Rule Controls */}
+          <div
+            style={{
+              background: "rgba(20,20,26,0.92)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: 16,
+              padding: 20,
+              marginBottom: 20,
+              display: "flex",
+              gap: 20,
+              alignItems: "flex-end",
+              flexWrap: "wrap",
+            }}
+          >
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: 13,
+                  marginBottom: 6,
+                  fontWeight: 500,
+                  color: "#eaf4ff",
+                }}
+              >
+                Experiment Name
+              </label>
+              <input
+                type="text"
+                value={experimentName}
+                onChange={(e) => setExperimentName(e.target.value)}
+                placeholder="e.g., AryaExperiment1Dec2025"
+                style={{
+                  width: "100%",
+                  padding: 10,
+                  borderRadius: 8,
+                  border: "1px solid rgba(255,255,255,0.18)",
+                  background: "rgba(0,0,0,0.4)",
+                  color: "#eaf4ff",
+                  fontSize: 13,
+                }}
+              />
+            </div>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: 13,
+                  marginBottom: 6,
+                  fontWeight: 500,
+                  color: "#eaf4ff",
+                }}
+              >
+                Activation Rule
+              </label>
+              <select
+                value={activationRule}
+                onChange={(e) => setActivationRule(e.target.value)}
+                disabled={isSimulating || hasRun}
+                style={{
+                  width: "100%",
+                  padding: 10,
+                  borderRadius: 8,
+                  border: "1px solid rgba(255,255,255,0.18)",
+                  background: "rgba(0,0,0,0.4)",
+                  color: "#eaf4ff",
+                  fontSize: 13,
+                  cursor: isSimulating || hasRun ? "not-allowed" : "pointer",
+                }}
+              >
+                <option value="Discrete" style={{ background: "#000", color: "#fff" }}>
+                  Discrete
+                </option>
+                <option value="Continuous" style={{ background: "#000", color: "#fff" }}>
+                  Continuous
+                </option>
+                <option value="Discrete-EF" style={{ background: "#000", color: "#fff" }}>
+                  Discrete-EF
+                </option>
+                <option value="Continuous-EF" style={{ background: "#000", color: "#fff" }}>
+                  Continuous-EF
+                </option>
+              </select>
+            </div>
+          </div>
+
           <div
             style={{
               display: simulationMode === "activation" ? "block" : "none",
@@ -1656,6 +1784,8 @@ export default function SimulationPhase() {
               setCapacityNoiseLevel={setCapacityNoiseLevel}
               capacityIterations={capacityIterations}
               setCapacityIterations={setCapacityIterations}
+              capacityErrorTolerance={capacityErrorTolerance}
+              setCapacityErrorTolerance={setCapacityErrorTolerance}
               capacityTestActive={capacityTestActive}
               capacityResults={capacityResults}
               handleRunCapacityTest={handleRunCapacityTest}

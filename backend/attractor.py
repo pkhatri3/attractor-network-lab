@@ -2,6 +2,7 @@ from numpy import *
 from copy import deepcopy
 import numpy as np
 import math
+from scipy.spatial.distance import cdist
 
 # This code was written by Arya Teymourlouei and Dr. James Reggia
 
@@ -19,7 +20,7 @@ def sgn(x,oldval):         # compute a = sgn(input)
 # Attractor Neural Network Class Definition
 class attractorNet(object):
 
-    def __init__ (self, N, C, scale,allow_diag: bool = False, update_gain=1.8):  # create N-node Hopfield Net 
+    def __init__ (self, N, C, scale,allow_diag: bool = False, update_gain=1.8, positions=None, coupling_gain=0.1, coupling_str=1):  # create N-node Hopfield Net 
         self.N = N
         self.A = zeros(N)             # A = activity/activations state
         self.W = zeros((N,N))         # W = N x N weight matrix
@@ -29,8 +30,19 @@ class attractorNet(object):
         self.scale = scale            # decay rate (You can ignore this)
         self.allow_diag = allow_diag  # whether to allow self-connections (diagonal of W)
         self.update_gain = update_gain
+        self.coupling_gain = coupling_gain  # coupling strength for electric field
+        self.coupling_str = coupling_str     # coupling strength parameter
         if self.allow_diag:
             np.fill_diagonal(self.C, 1)
+        
+        # Compute synaptic kernel for electric field if positions are provided
+        self.S = None
+        if positions is not None:
+            self.S = self.get_synaptic_kernel(positions)
+        elif N > 0:
+            # Default: use connection matrix as distance proxy (1 for connected, large for not)
+            # This is a fallback when positions aren't available
+            self.S = np.ones((N, N)) * 0.1  # Small default coupling
     # There are different ways to learn, just worry about learn_standard() 
     # for right now.
     def learn(self, data,N,M,learn_type, return_history=True):
@@ -165,11 +177,54 @@ class attractorNet(object):
             s = dot(self.W[i,:], self.A)
             self.A[i] = math.tanh(self.update_gain*s)
 
+    def get_synaptic_kernel(self, positions):
+        """Compute synaptic kernel matrix from positions"""
+        positions = np.array(positions)
+        if positions.ndim == 1:
+            # If 1D, assume it's a flat list of coordinates, reshape to 2D
+            if len(positions) == self.N * 2:
+                positions = positions.reshape(self.N, 2)
+            else:
+                # Fallback: create dummy positions
+                positions = np.random.rand(self.N, 2) * 100
+        
+        if positions.shape[0] != self.N:
+            # Mismatch: use default
+            return np.ones((self.N, self.N)) * 0.1
+        
+        S = cdist(positions, positions, 'euclidean')
+        S = np.exp(-self.coupling_gain * (S**2))
+        return S
+
+    def update_ef(self):
+        """Update with electric field (discrete)"""
+        eps = self.coupling_str
+        indices = random.permutation(self.N)
+        for i in indices:
+            ef_current = dot(self.S[i,:], self.A) if self.S is not None else 0
+            syn_current = dot(self.W[i,:], self.A)
+            scalprod = syn_current + eps * ef_current
+            self.A[i] = sgn(scalprod, self.A[i])
+
+    def update_continuous_ef(self):
+        """Update with electric field (continuous)"""
+        eps = self.coupling_str
+        indices = random.permutation(self.N)
+        for i in indices:
+            ef_current = dot(self.S[i,:], self.A) if self.S is not None else 0
+            syn_current = dot(self.W[i,:], self.A)
+            s = syn_current + eps * ef_current
+            self.A[i] = math.tanh(self.update_gain * s)
+
     def update(self, update_type='standard'):
         if update_type == 'standard':
             self.update_standard()
         elif update_type == 'continuous':
             self.update_continuous()
+        elif update_type == 'ef':
+            self.update_ef()
+        elif update_type == 'continuous_ef':
+            self.update_continuous_ef()
         else:
             print('invalid update method')
             raise SystemExit(1)
