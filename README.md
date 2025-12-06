@@ -446,10 +446,10 @@ neural/
 
 
 ## Contributors
-Pranav Khatri
-Ryan DeCamp
-Vihaan Motwani
-Abdullatif Elmuaqaat
+Pranav Khatri,
+Ryan DeCamp,
+Vihaan Motwani,
+Abdullatif Elmuaqaat,
 Shaun Fernandes
 
 ## Acknowledgments
