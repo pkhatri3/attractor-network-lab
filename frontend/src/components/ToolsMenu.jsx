@@ -31,6 +31,8 @@ export default function ToolsMenu({
   setHexRows,
   hexCols,
   setHexCols,
+  hexRadius,
+  setHexRadius,
   onClearAll,
   graphRefs,
   objectType,
@@ -418,6 +420,20 @@ export default function ToolsMenu({
             className="dynamic-inputs-mar"
           />
         </div>
+      </div>
+    )}
+    {selectedTemplate === "Hexagonal Connectivity" && (
+      <div>
+        <label style={{ display: "block", fontSize: 13, marginBottom: 4 }}>
+          Radius
+        </label>
+        <input
+          type="number"
+          min="1"
+          value={hexRadius}
+          onChange={(e) => setHexRadius(e.target.value)}
+          className="dynamic-inputs"
+        />
       </div>
     )}
       {/*Import/Export buttons*/}

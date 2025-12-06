@@ -182,6 +182,7 @@ export const generateCapacityReportPdf = ({
   experimentName,
   activationRule,
   capacityNoiseLevel,
+  capacityErrorTolerance,
   capacityResults,
   finalW,
   learningInfo,
@@ -236,6 +237,17 @@ export const generateCapacityReportPdf = ({
       capacityNoiseLevel != null
         ? (capacityNoiseLevel * 100).toFixed(0) + "%"
         : "(not set)"
+    }`,
+    margin,
+    y
+  );
+  y += lineHeight;
+
+  doc.text(
+    `Error Tolerance: ${
+      capacityErrorTolerance != null
+        ? (capacityErrorTolerance * 100).toFixed(0) + "%"
+        : "0%"
     }`,
     margin,
     y

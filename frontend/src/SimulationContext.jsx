@@ -17,6 +17,7 @@ export function SimulationProvider({ children }) {
   const [capacityResults, setCapacityResults] = useState([]);
   const [capacityNoiseLevel, setCapacityNoiseLevel] = useState(0);
   const [capacityIterations, setCapacityIterations] = useState(5);
+  const [capacityErrorTolerance, setCapacityErrorTolerance] = useState(0);
   const [simulationNoiseLevel, setSimulationNoiseLevel] = useState(0);
   const [capacityTestActive, setCapacityTestActive] = useState(false);
   const [initialA, setInitialA] = useState(null);
@@ -41,6 +42,7 @@ export function SimulationProvider({ children }) {
     setIter(0);
     setCapacityResults([]);
     setCapacityNoiseLevel(0);
+    setCapacityErrorTolerance(0);
     setSimulationNoiseLevel(0);
     setCapacityTestActive(false);
     setInitialA(null);
@@ -63,6 +65,7 @@ export function SimulationProvider({ children }) {
         capacityResults, setCapacityResults,
         capacityNoiseLevel, setCapacityNoiseLevel,
         capacityIterations, setCapacityIterations,
+        capacityErrorTolerance, setCapacityErrorTolerance,
         simulationNoiseLevel, setSimulationNoiseLevel,
         capacityTestActive, setCapacityTestActive,
         initialA, setInitialA,

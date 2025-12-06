@@ -1,33 +1,94 @@
-# macOS
-.DS_Store
-*/.DS_Store
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+backend/venv/
+*.egg-info/
+dist/
+build/
+*.egg
 
-# Node modules
+# Node.js
 node_modules/
 frontend/node_modules/
-backend/node_modules/
-
-# Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+lerna-debug.log*
+.pnpm-debug.log*
 
-# Build output
+# Build outputs
 dist/
 build/
-frontend/build/
 frontend/dist/
+frontend/build/
+*.tsbuildinfo
 
-# Env files
+# Environment variables
 .env
 .env.local
 .env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
 
-# Cache
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*/.DS_Store
+*.sublime-project
+*.sublime-workspace
+
+# Logs
+*.log
+backend.log
+frontend.log
+logs/
+*.log.*
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+*.cache
 .cache/
-.next/
-out/
 
-venv/
-__pycache__/
+# Testing
+.coverage
+.pytest_cache/
+.tox/
+.hypothesis/
+htmlcov/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Vite
+.vite/
+
+# TypeScript
+*.tsbuildinfo
+
+# Project specific
+backend/.deps_installed

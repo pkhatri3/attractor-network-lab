@@ -49,6 +49,7 @@ const [rectCols, setRectCols] = useState("4");
 // Default grid dimensions for hexagonal layout
 const [hexRows, setHexRows] = useState("4");
 const [hexCols, setHexCols] = useState("6");
+const [hexRadius, setHexRadius] = useState("1");
 
 
 // Stores reference to the graph clearing function (used by Clear All)
@@ -161,6 +162,8 @@ const handleToggleGrid = () => {
         setHexRows={setHexRows}
         hexCols={hexCols}
         setHexCols={setHexCols}
+        hexRadius={hexRadius}
+        setHexRadius={setHexRadius}
         onClearAll={handleClearAll}
         graphRefs={graphRefs}
         setNetwork={setNetwork}
@@ -185,6 +188,7 @@ const handleToggleGrid = () => {
         rectCols={rectCols}
         hexRows={hexRows}
         hexCols={hexCols}
+        hexRadius={hexRadius}
         objectType={objectType}
         selectedTemplate={selectedTemplate}
         customTemplates={customTemplates}

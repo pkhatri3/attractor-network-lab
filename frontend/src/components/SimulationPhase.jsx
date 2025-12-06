@@ -45,7 +45,9 @@ const ActivationLayout = ({
     iter,
     energyHist,
     granularMode,
-    setGranularMode
+    setGranularMode,
+    AHistLength,
+    onIterationChange,
   }) => (
     <div style={{ width: "100%", paddingTop: "60px", display: "flex", flexDirection: "column", gap: 20, pointerEvents: "auto", zIndex: 1 }}>
       
@@ -221,60 +223,97 @@ const ActivationLayout = ({
           )}
         </div>
       </div>
+      
       {/* Energy graph */}
       <div style={{ ...panel, position: "relative", overflow: "visible" }}>
         <h3 style={{ marginTop: 0 }}>Network Energy</h3>
 
-        {energyHist.length ? (
-          <div style={{ width: "100%", height: 250, minWidth: 0, minHeight: 200 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={energyHist.map((E, t) => ({ t, E }))}
-                margin={{ top: 10, right: 20, bottom: 30, left: 15 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                <XAxis
-                  dataKey="t"
-                  label={{
-                    value: "Timestep",
-                    position: "bottom",
-                    dy: 0,
-                    marginTop: "50px",
-                    fill: "#999",
-                    offset: 10,
-                  }}
-                  tick={{ fill: "#999" }}
-                />
-                <YAxis
-                  label={{
-                    value: "Energy",
-                    angle: -90,
-                    position: "left",
-                    dy: -25,
-                    fill: "#999",
-                    
-                  }}
-                  tick={{ fill: "#999" }}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#2a2a2a",
-                    border: "1px solid #444",
-                  }}
-                  labelStyle={{ color: "#fff" }}
-                  itemStyle={{ color: "#1a6fd6" }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="E"
-                  stroke="#1a6fd6"
-                  strokeWidth={2}
-                  dot={false}
-                  isAnimationActive={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+              {energyHist.length ? (
+          <>
+            <div
+              style={{
+                width: "100%",
+                height: 250,
+                minWidth: 0,
+                minHeight: 200,
+              }}
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={energyHist.map((E, t) => ({ t, E }))}
+                  margin={{ top: 10, right: 20, bottom: 30, left: 15 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                  <XAxis
+                    dataKey="t"
+                    label={{
+                      value: "Timestep",
+                      position: "bottom",
+                      dy: 0,
+                      marginTop: "50px",
+                      fill: "#999",
+                      offset: 10,
+                    }}
+                    tick={{ fill: "#999" }}
+                  />
+                  <YAxis
+                    label={{
+                      value: "Energy",
+                      angle: -90,
+                      position: "left",
+                      dy: -25,
+                      fill: "#999",
+                    }}
+                    tick={{ fill: "#999" }}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#2a2a2a",
+                      border: "1px solid #444",
+                    }}
+                    labelStyle={{ color: "#fff" }}
+                    itemStyle={{ color: "#1a6fd6" }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="E"
+                    stroke="#1a6fd6"
+                    strokeWidth={2}
+                    dot={false}
+                    isAnimationActive={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* NEW: iteration scroll bar after simulation ends */}
+            {AHistLength > 0 &&
+              onIterationChange &&
+              !isSimulating &&
+              hasRun && (
+                <div style={{ marginTop: 16 }}>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: "#aaa",
+                      marginBottom: 4,
+                    }}
+                  >
+                    View iteration: {iter} / {AHistLength - 1}
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={Math.max(0, AHistLength - 1)}
+                    value={iter}
+                    onChange={(e) =>
+                      onIterationChange(Number(e.target.value))
+                    }
+                    style={{ width: "100%" }}
+                  />
+                </div>
+              )}
+          </>
         ) : (
           <div
             style={{
@@ -289,13 +328,15 @@ const ActivationLayout = ({
         )}
       </div>
     </div>
-  );
+);
 
 const CapacityLayout = ({
     capacityNoiseLevel,
     setCapacityNoiseLevel,
     capacityIterations,
     setCapacityIterations,
+    capacityErrorTolerance,
+    setCapacityErrorTolerance,
     capacityTestActive,
     capacityResults,
     handleRunCapacityTest,
@@ -340,6 +381,23 @@ const CapacityLayout = ({
             disabled={capacityTestActive}
             style={{ width: "100%" }}
           />
+        </div>
+
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontSize: 13, marginBottom: 6 }}>Error Tolerance: {(capacityErrorTolerance * 100).toFixed(0)}%</div>
+          <input
+            type="range"
+            min={0}
+            max={0.5}
+            step={0.01}
+            value={capacityErrorTolerance}
+            onChange={e => setCapacityErrorTolerance(Number(e.target.value))}
+            disabled={capacityTestActive}
+            style={{ width: "100%" }}
+          />
+          <div style={{ fontSize: 11, color: "#888", marginTop: 4 }}>
+            Recalls with up to {(capacityErrorTolerance * 100).toFixed(0)}% mismatched bits will be counted as successful
+          </div>
         </div>
 
         <button
@@ -871,6 +929,9 @@ export default function SimulationPhase() {
     learningColorScheme,
     networkId,
     rule,
+    learningRate,
+    scale,
+    backend,
   } = useContext(LearningContext);
 
   const {
@@ -882,6 +943,7 @@ export default function SimulationPhase() {
     capacityResults, setCapacityResults,
     capacityNoiseLevel, setCapacityNoiseLevel,
     capacityIterations, setCapacityIterations,
+    capacityErrorTolerance, setCapacityErrorTolerance,
     capacityTestActive, setCapacityTestActive,
     simulationNoiseLevel, setSimulationNoiseLevel,
     initialA, setInitialA,
@@ -901,7 +963,7 @@ export default function SimulationPhase() {
   const [drawerWidth, setDrawerWidth] = useState(350); // px
   const [granularMode, setGranularMode] = useState(true);
   const [experimentName, setExperimentName] = useState("");
-  const [activationRule, setActivationRule] = useState("");
+  const [activationRule, setActivationRule] = useState("Discrete");
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportExperimentInput, setReportExperimentInput] = useState("");
   const [reportFileNameInput, setReportFileNameInput] = useState("");
@@ -1018,8 +1080,10 @@ export default function SimulationPhase() {
         scale: 1.0,
         rule: "standard",
         noise_level: capacityNoiseLevel,
+        error_tolerance: capacityErrorTolerance,
         max_iters: 50,
         iterations: capacityIterations,
+        update_type: getUpdateType(activationRule),
       };
 
       const res = await fetch(`${API_URL}/memory_capacity_test`, {
@@ -1158,6 +1222,23 @@ export default function SimulationPhase() {
     setError(null);
   };
 
+  const handleIterationChange = (idx) => {
+    if (!Array.isArray(AHist) || AHist.length === 0) return;
+
+    const clamped = Math.min(Math.max(idx, 0), AHist.length - 1);
+    setIter(clamped);
+
+    // When browsing after the run, sync the visible activation
+    if (!isSimulating && hasRun && AHist[clamped]) {
+      const state = AHist[clamped];
+      setAvec(state);
+      if (inputMode === "text") {
+        setAtext(JSON.stringify(state));
+      }
+    }
+  };
+
+  
   const stopSimulation = () => {
     if (abortRef.current) {
       abortRef.current.abort();
@@ -1196,6 +1277,17 @@ export default function SimulationPhase() {
   const canSimulate =
     neuronCount > 0 && Avec.length === neuronCount && WHist?.length;
 
+  // Map activation rule dropdown values to backend update types
+  const getUpdateType = (rule) => {
+    const mapping = {
+      "Discrete": "standard",
+      "Continuous": "continuous",
+      "Discrete-EF": "ef",
+      "Continuous-EF": "continuous_ef",
+    };
+    return mapping[rule] || "standard";
+  };
+
   async function onStartSimulation() {
     if (!canSimulate) return;
     setError(null);
@@ -1219,6 +1311,7 @@ export default function SimulationPhase() {
           network_id: networkId,
           max_iters: 200,
           granular: granularMode,
+          update_type: getUpdateType(activationRule),
         }),
         signal: controller.signal,
       });
@@ -1376,7 +1469,9 @@ export default function SimulationPhase() {
         if (simulationMode === "capacity") {
           const learningInfo = {
             rule: rule || "Standard Hebbian",
-            learningRate: 0.25,
+            learningRate: learningRate || 0.25,
+            scale: scale || 1.0,
+            backend: backend || "numpy",
             numNeurons: neuronCount,
             numMemories: memCountForSummary,
             colorMap: learningColorScheme || "blueWhiteRed",
@@ -1386,6 +1481,7 @@ export default function SimulationPhase() {
             experimentName: finalName,
             activationRule,
             capacityNoiseLevel,
+            capacityErrorTolerance,
             capacityResults,
             weightsCanvas: weightsCanvasRef.current,
             chartElement: capacityChartRef.current,
@@ -1430,7 +1526,9 @@ export default function SimulationPhase() {
 
         const learningInfo = {
           rule: rule || "Standard Hebbian",
-          learningRate: 0.25,
+          learningRate: learningRate || 0.25,
+          scale: scale || 1.0,
+          backend: backend || "numpy",
           numNeurons: neuronCount,
           numMemories: memCountForSummary,
           colorMap: learningColorScheme || "blueWhiteRed",
@@ -1440,6 +1538,7 @@ export default function SimulationPhase() {
           experimentName: finalExperimentName,
           activationRule,
           capacityNoiseLevel,
+          capacityErrorTolerance,
           capacityResults,
           finalW,
           learningInfo,
@@ -1560,31 +1659,119 @@ export default function SimulationPhase() {
             transition: "margin-right 0.25s ease",
           }}
         >
+          {/* Experiment Name and Activation Rule Controls */}
+          <div
+            style={{
+              background: "rgba(20,20,26,0.92)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: 16,
+              padding: 20,
+              marginBottom: 20,
+              display: "flex",
+              gap: 20,
+              alignItems: "flex-end",
+              flexWrap: "wrap",
+            }}
+          >
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: 13,
+                  marginBottom: 6,
+                  fontWeight: 500,
+                  color: "#eaf4ff",
+                }}
+              >
+                Experiment Name
+              </label>
+              <input
+                type="text"
+                value={experimentName}
+                onChange={(e) => setExperimentName(e.target.value)}
+                placeholder="e.g., AryaExperiment1Dec2025"
+                style={{
+                  width: "100%",
+                  padding: 10,
+                  borderRadius: 8,
+                  border: "1px solid rgba(255,255,255,0.18)",
+                  background: "rgba(0,0,0,0.4)",
+                  color: "#eaf4ff",
+                  fontSize: 13,
+                }}
+              />
+            </div>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: 13,
+                  marginBottom: 6,
+                  fontWeight: 500,
+                  color: "#eaf4ff",
+                }}
+              >
+                Activation Rule
+              </label>
+              <select
+                value={activationRule}
+                onChange={(e) => setActivationRule(e.target.value)}
+                disabled={isSimulating || hasRun}
+                style={{
+                  width: "100%",
+                  padding: 10,
+                  borderRadius: 8,
+                  border: "1px solid rgba(255,255,255,0.18)",
+                  background: "rgba(0,0,0,0.4)",
+                  color: "#eaf4ff",
+                  fontSize: 13,
+                  cursor: isSimulating || hasRun ? "not-allowed" : "pointer",
+                }}
+              >
+                <option value="Discrete" style={{ background: "#000", color: "#fff" }}>
+                  Discrete
+                </option>
+                <option value="Continuous" style={{ background: "#000", color: "#fff" }}>
+                  Continuous
+                </option>
+                <option value="Discrete-EF" style={{ background: "#000", color: "#fff" }}>
+                  Discrete-EF
+                </option>
+                <option value="Continuous-EF" style={{ background: "#000", color: "#fff" }}>
+                  Continuous-EF
+                </option>
+              </select>
+            </div>
+          </div>
+
           <div
             style={{
               display: simulationMode === "activation" ? "block" : "none",
             }}
           >
-            <ActivationLayout
-              inputMode={inputMode}
-              setInputMode={setInputMode}
-              isSimulating={isSimulating}
-              hasRun={hasRun}
-              capacityTestActive={capacityTestActive}
-              canSimulate={canSimulate}
-              onStartSimulation={onStartSimulation}
-              handleReset={handleReset}
-              neuronCount={neuronCount}
-              Atext={Atext}
-              handleTextChange={handleTextChange}
-              Avec={Avec}
-              setAvec={setAvec}
-              AHist={AHist}
-              iter={iter}
-              energyHist={energyHist}
-              granularMode={granularMode}
-              setGranularMode={setGranularMode}
-            />
+          <ActivationLayout
+            inputMode={inputMode}
+            setInputMode={setInputMode}
+            isSimulating={isSimulating}
+            hasRun={hasRun}
+            capacityTestActive={capacityTestActive}
+            canSimulate={canSimulate}
+            onStartSimulation={onStartSimulation}
+            handleReset={handleReset}
+            neuronCount={neuronCount}
+            Atext={Atext}
+            handleTextChange={handleTextChange}
+            Avec={Avec}
+            setAvec={setAvec}
+            AHist={AHist}
+            iter={iter}
+            energyHist={energyHist}
+            granularMode={granularMode}
+            setGranularMode={setGranularMode}
+            AHistLength={AHist.length}
+            onIterationChange={handleIterationChange}
+          />
+
           </div>
 
           <div
@@ -1597,6 +1784,8 @@ export default function SimulationPhase() {
               setCapacityNoiseLevel={setCapacityNoiseLevel}
               capacityIterations={capacityIterations}
               setCapacityIterations={setCapacityIterations}
+              capacityErrorTolerance={capacityErrorTolerance}
+              setCapacityErrorTolerance={setCapacityErrorTolerance}
               capacityTestActive={capacityTestActive}
               capacityResults={capacityResults}
               handleRunCapacityTest={handleRunCapacityTest}
@@ -1852,7 +2041,6 @@ const panel = {
   padding: 16,
   marginTop: 16,
 };
-
 const panelHeader = {
   display: "flex",
   alignItems: "center",

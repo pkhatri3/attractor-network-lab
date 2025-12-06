@@ -105,6 +105,7 @@ class SimPayload(BaseModel):
     update_type: str = "standard"
     update_gain: Optional[float] = None
     granular: bool = False
+    positions: Optional[List[List[float]]] = None  # Optional 2D positions for electric field
 
 @app.post("/simulate_stream")
 async def simulate_stream(payload: SimPayload):
@@ -123,10 +124,14 @@ async def simulate_stream(payload: SimPayload):
     A = np.array(payload.A, dtype=int)
 
     # Create a new attractor network instance using cached weights
+    positions = None
+    if payload.positions:
+        positions = np.array(payload.positions)
+    
     if backend == "jax":
         AN = JaxAttractorNet(len(A), np.ones((len(A), len(A))), 0)
     else:
-        AN = attractorNet(len(A), np.ones((len(A), len(A))), 0)
+        AN = attractorNet(len(A), np.ones((len(A), len(A))), 0, positions=positions)
         
     AN.W = W
     if payload.update_gain is not None:
@@ -168,9 +173,12 @@ class MemoryCapacityPayload(BaseModel):
     scale: float = 1.0
     rule: str = "standard"
     noise_level: float = 0.1
+    error_tolerance: float = 0.0
     max_iters: int = 50
     iterations: int = 1
     backend: str = "numpy"
+    update_type: str = "standard"
+    positions: Optional[List[List[float]]] = None
 
 @app.post("/memory_capacity_test")
 async def memory_capacity_test(payload: MemoryCapacityPayload):
@@ -189,10 +197,14 @@ async def memory_capacity_test(payload: MemoryCapacityPayload):
             for num_patterns in range(1, M + 1):
 
                 # Create a new attractor network and apply learning rule
+                positions = None
+                if payload.positions:
+                    positions = np.array(payload.positions)
+                
                 if payload.backend == "jax":
                     AN = JaxAttractorNet(N, C, payload.scale)
                 else:
-                    AN = attractorNet(N, C, payload.scale)
+                    AN = attractorNet(N, C, payload.scale, positions=positions)
                     
                 if payload.learning_rate is not None:
                     AN.mu = payload.learning_rate
@@ -222,16 +234,18 @@ async def memory_capacity_test(payload: MemoryCapacityPayload):
                         
                         for _ in range(payload.max_iters):
                             Aold = AN.A.copy() if payload.backend == "numpy" else np.array(AN.A)
-                            AN.update()
+                            AN.update(payload.update_type)
                             
                             curr_A = AN.A if payload.backend == "numpy" else np.array(AN.A)
                             if np.all(curr_A == Aold):
                                 break
 
-                        # Compute accuracy + success
+                        # Compute accuracy + success with error tolerance
                         recalled = AN.A if payload.backend == "numpy" else np.array(AN.A)
                         matches = np.sum(recalled == original)
-                        success = (matches == N)
+                        accuracy = matches / N if N > 0 else 0
+                        # Success if accuracy is at least (1 - error_tolerance)
+                        success = (accuracy >= (1.0 - payload.error_tolerance))
                         if success:
                             current_run_success_count += 1
                     
