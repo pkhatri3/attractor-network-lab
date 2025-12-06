@@ -1396,6 +1396,7 @@ export default function SimulationPhase() {
           finalW,
           learningInfo,
           fileName: finalFileName,
+          weightsCanvas: weightsCanvasRef.current,
         });
       } else {
         generateRecallReportPdf({
@@ -1770,6 +1771,20 @@ export default function SimulationPhase() {
             </div>
           </div>
         )}
+        
+        {finalW && (
+          <div style={{ position: "absolute", left: -9999, top: -9999 }}>
+            <WeightsCanvas
+              matrix={finalW}
+              size={400}
+              cmapName={learningColorScheme || "blueWhiteRed"}
+              onCanvasReady={(canvas) => {
+                weightsCanvasRef.current = canvas;  
+              }}
+            />
+          </div>
+        )}
+
 
 
     </div>
