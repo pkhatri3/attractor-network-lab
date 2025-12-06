@@ -529,7 +529,7 @@ export default function ToolsMenu({
       </Modal>
 
       <button
-        onClick={() => window.open("https://www.youtube.com/watch?v=95PzOHwWmVE", "_blank")}
+        onClick={() => window.open("https://www.youtube.com/watch?v=YmuU0GYFRfA", "_blank")}
         style={{ ...baseButton, textAlign: "center" }}
       >
         Watch Tutorial on YouTube
