@@ -1690,7 +1690,7 @@ export default function SimulationPhase() {
               selectedMemoryIndex={selectedMemoryIndex}
               setSelectedMemoryIndex={setSelectedMemoryIndex}
               parsedMems={parsedMems}
-              //step-aware matrix + slider info
+              //step-aware matrix + slider info. This is the new slider logic btw
               currentW={currentW}
               finalW={finalW}
               wStep={wStep}
