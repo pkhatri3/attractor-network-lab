@@ -452,7 +452,11 @@ const CapacityLayout = ({
   selectedMemoryIndex,
   setSelectedMemoryIndex,
   parsedMems,
+  currentW,
   finalW,
+  wStep,
+  setWStep,
+  WHistLength,
   learningColorScheme,
   isSimulating,
   hasRun,
@@ -461,7 +465,6 @@ const CapacityLayout = ({
   canSimulate,
   generateNoisyInput,
   onWeightsCanvasReady,
-  
 }) => (
   <div
     style={{
@@ -507,19 +510,47 @@ const CapacityLayout = ({
         <h3>W</h3>
       </div>
       {showW && (
-        <div style={{ marginTop: 12 }}>
-          {finalW ? (
-            <WeightsCanvas
-              matrix={finalW}
-              size={300}
-              cmapName={learningColorScheme || "blueWhiteRed"}
-              onCanvasReady={onWeightsCanvasReady}
-            />
-          ) : (
-            <p>No weights available.</p>
-          )}
+  <div style={{ marginTop: 12 }}>
+    {currentW ? (
+      <>
+        {/* Step label like in Learning phase */}
+        <div
+          style={{
+            fontSize: 12,
+            opacity: 0.8,
+            marginBottom: 6,
+          }}
+        >
+          Weight Matrix W (Step {wStep + 1}/{WHistLength || 1})
         </div>
-      )}
+
+        {/* Matrix heatmap */}
+        <WeightsCanvas
+          matrix={currentW}
+          size={300}
+          cmapName={learningColorScheme || "blueWhiteRed"}
+          onCanvasReady={onWeightsCanvasReady}
+        />
+
+        {/* Slider to move through WHist */}
+        {WHistLength > 1 && (
+          <input
+            type="range"
+            min={0}
+            max={WHistLength - 1}
+            value={wStep}
+            onChange={(e) => setWStep(Number(e.target.value))}
+            style={{ width: "100%", marginTop: 10 }}
+          />
+        )}
+      </>
+    ) : (
+      <p>No weights available.</p>
+    )}
+  </div>
+)}
+
+
     </div>
 
     {/* Memories */}
@@ -876,6 +907,8 @@ export default function SimulationPhase() {
   const [reportFileNameInput, setReportFileNameInput] = useState("");
   const weightsCanvasRef = useRef(null);
   const capacityChartRef = useRef(null);
+  const [wStep, setWStep] = useState(0); // for stepping through WHist
+
 
     const getParsedMemories = () => {
     try {
@@ -1263,7 +1296,22 @@ export default function SimulationPhase() {
     }
   };
 
-  const finalW = WHist?.[WHist.length - 1] || null;
+  // pick which weight matrix to show (step slider) and final for reports
+  const hasWHist = Array.isArray(WHist) && WHist.length > 0;
+
+  // keep wStep in range whenever WHist length changes
+  useEffect(() => {
+    if (!hasWHist) {
+      if (wStep !== 0) setWStep(0);
+      return;
+    }
+    if (wStep >= WHist.length) {
+      setWStep(WHist.length - 1);
+    }
+  }, [hasWHist, WHist, wStep]);
+
+  const currentW = hasWHist ? WHist[wStep] : null;
+  const finalW = hasWHist ? WHist[WHist.length - 1] : null;
 
   let parsedMems = [];
   try {
@@ -1396,6 +1444,7 @@ export default function SimulationPhase() {
           finalW,
           learningInfo,
           fileName: finalFileName,
+          weightsCanvas: weightsCanvasRef.current,
         });
       } else {
         generateRecallReportPdf({
@@ -1641,7 +1690,12 @@ export default function SimulationPhase() {
               selectedMemoryIndex={selectedMemoryIndex}
               setSelectedMemoryIndex={setSelectedMemoryIndex}
               parsedMems={parsedMems}
+              //step-aware matrix + slider info
+              currentW={currentW}
               finalW={finalW}
+              wStep={wStep}
+              setWStep={setWStep}
+              WHistLength={Array.isArray(WHist) ? WHist.length : 0}
               learningColorScheme={learningColorScheme}
               isSimulating={isSimulating}
               hasRun={hasRun}
@@ -1653,6 +1707,7 @@ export default function SimulationPhase() {
                 weightsCanvasRef.current = canvas;
               }}
             />
+
           </div>
         )}
       </div>
@@ -1770,6 +1825,20 @@ export default function SimulationPhase() {
             </div>
           </div>
         )}
+        
+        {finalW && (
+          <div style={{ position: "absolute", left: -9999, top: -9999 }}>
+            <WeightsCanvas
+              matrix={finalW}
+              size={400}
+              cmapName={learningColorScheme || "blueWhiteRed"}
+              onCanvasReady={(canvas) => {
+                weightsCanvasRef.current = canvas;  
+              }}
+            />
+          </div>
+        )}
+
 
 
     </div>
