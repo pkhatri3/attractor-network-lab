@@ -45,7 +45,9 @@ const ActivationLayout = ({
     iter,
     energyHist,
     granularMode,
-    setGranularMode
+    setGranularMode,
+    AHistLength,
+    onIterationChange,
   }) => (
     <div style={{ width: "100%", paddingTop: "60px", display: "flex", flexDirection: "column", gap: 20, pointerEvents: "auto", zIndex: 1 }}>
       
@@ -221,60 +223,97 @@ const ActivationLayout = ({
           )}
         </div>
       </div>
+      
       {/* Energy graph */}
       <div style={{ ...panel, position: "relative", overflow: "visible" }}>
         <h3 style={{ marginTop: 0 }}>Network Energy</h3>
 
-        {energyHist.length ? (
-          <div style={{ width: "100%", height: 250, minWidth: 0, minHeight: 200 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={energyHist.map((E, t) => ({ t, E }))}
-                margin={{ top: 10, right: 20, bottom: 30, left: 15 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                <XAxis
-                  dataKey="t"
-                  label={{
-                    value: "Timestep",
-                    position: "bottom",
-                    dy: 0,
-                    marginTop: "50px",
-                    fill: "#999",
-                    offset: 10,
-                  }}
-                  tick={{ fill: "#999" }}
-                />
-                <YAxis
-                  label={{
-                    value: "Energy",
-                    angle: -90,
-                    position: "left",
-                    dy: -25,
-                    fill: "#999",
-                    
-                  }}
-                  tick={{ fill: "#999" }}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#2a2a2a",
-                    border: "1px solid #444",
-                  }}
-                  labelStyle={{ color: "#fff" }}
-                  itemStyle={{ color: "#1a6fd6" }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="E"
-                  stroke="#1a6fd6"
-                  strokeWidth={2}
-                  dot={false}
-                  isAnimationActive={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+              {energyHist.length ? (
+          <>
+            <div
+              style={{
+                width: "100%",
+                height: 250,
+                minWidth: 0,
+                minHeight: 200,
+              }}
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={energyHist.map((E, t) => ({ t, E }))}
+                  margin={{ top: 10, right: 20, bottom: 30, left: 15 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                  <XAxis
+                    dataKey="t"
+                    label={{
+                      value: "Timestep",
+                      position: "bottom",
+                      dy: 0,
+                      marginTop: "50px",
+                      fill: "#999",
+                      offset: 10,
+                    }}
+                    tick={{ fill: "#999" }}
+                  />
+                  <YAxis
+                    label={{
+                      value: "Energy",
+                      angle: -90,
+                      position: "left",
+                      dy: -25,
+                      fill: "#999",
+                    }}
+                    tick={{ fill: "#999" }}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#2a2a2a",
+                      border: "1px solid #444",
+                    }}
+                    labelStyle={{ color: "#fff" }}
+                    itemStyle={{ color: "#1a6fd6" }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="E"
+                    stroke="#1a6fd6"
+                    strokeWidth={2}
+                    dot={false}
+                    isAnimationActive={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* NEW: iteration scroll bar after simulation ends */}
+            {AHistLength > 0 &&
+              onIterationChange &&
+              !isSimulating &&
+              hasRun && (
+                <div style={{ marginTop: 16 }}>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: "#aaa",
+                      marginBottom: 4,
+                    }}
+                  >
+                    View iteration: {iter} / {AHistLength - 1}
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={Math.max(0, AHistLength - 1)}
+                    value={iter}
+                    onChange={(e) =>
+                      onIterationChange(Number(e.target.value))
+                    }
+                    style={{ width: "100%" }}
+                  />
+                </div>
+              )}
+          </>
         ) : (
           <div
             style={{
@@ -289,7 +328,7 @@ const ActivationLayout = ({
         )}
       </div>
     </div>
-  );
+);
 
 const CapacityLayout = ({
     capacityNoiseLevel,
@@ -1158,6 +1197,23 @@ export default function SimulationPhase() {
     setError(null);
   };
 
+  const handleIterationChange = (idx) => {
+    if (!Array.isArray(AHist) || AHist.length === 0) return;
+
+    const clamped = Math.min(Math.max(idx, 0), AHist.length - 1);
+    setIter(clamped);
+
+    // When browsing after the run, sync the visible activation
+    if (!isSimulating && hasRun && AHist[clamped]) {
+      const state = AHist[clamped];
+      setAvec(state);
+      if (inputMode === "text") {
+        setAtext(JSON.stringify(state));
+      }
+    }
+  };
+
+  
   const stopSimulation = () => {
     if (abortRef.current) {
       abortRef.current.abort();
@@ -1565,26 +1621,29 @@ export default function SimulationPhase() {
               display: simulationMode === "activation" ? "block" : "none",
             }}
           >
-            <ActivationLayout
-              inputMode={inputMode}
-              setInputMode={setInputMode}
-              isSimulating={isSimulating}
-              hasRun={hasRun}
-              capacityTestActive={capacityTestActive}
-              canSimulate={canSimulate}
-              onStartSimulation={onStartSimulation}
-              handleReset={handleReset}
-              neuronCount={neuronCount}
-              Atext={Atext}
-              handleTextChange={handleTextChange}
-              Avec={Avec}
-              setAvec={setAvec}
-              AHist={AHist}
-              iter={iter}
-              energyHist={energyHist}
-              granularMode={granularMode}
-              setGranularMode={setGranularMode}
-            />
+          <ActivationLayout
+            inputMode={inputMode}
+            setInputMode={setInputMode}
+            isSimulating={isSimulating}
+            hasRun={hasRun}
+            capacityTestActive={capacityTestActive}
+            canSimulate={canSimulate}
+            onStartSimulation={onStartSimulation}
+            handleReset={handleReset}
+            neuronCount={neuronCount}
+            Atext={Atext}
+            handleTextChange={handleTextChange}
+            Avec={Avec}
+            setAvec={setAvec}
+            AHist={AHist}
+            iter={iter}
+            energyHist={energyHist}
+            granularMode={granularMode}
+            setGranularMode={setGranularMode}
+            AHistLength={AHist.length}
+            onIterationChange={handleIterationChange}
+          />
+
           </div>
 
           <div
@@ -1852,7 +1911,6 @@ const panel = {
   padding: 16,
   marginTop: 16,
 };
-
 const panelHeader = {
   display: "flex",
   alignItems: "center",
