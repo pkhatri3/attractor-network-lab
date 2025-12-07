@@ -4,14 +4,92 @@ A comprehensive web-based platform for constructing, training, and simulating Ho
 
 ## Table of Contents
 
+- [Quick Start](#quick-start)
 - [Overview](#overview)
 - [Features](#features)
 - [Technology Stack](#technology-stack)
 - [Installation](#installation)
-- [Quick Start](#quick-start)
 - [Usage Guide](#usage-guide)
 - [Configuration](#configuration)
 - [Troubleshooting](#troubleshooting)
+
+## Quick Start
+
+### Using Startup Scripts (Recommended)
+
+The easiest way to start the application is using the provided startup scripts:
+
+**On macOS/Linux:**
+```bash
+./start.sh
+```
+
+**On Windows:**
+```cmd
+start.bat
+```
+
+The startup script will:
+- Check prerequisites
+- Set up virtual environment if needed
+- Install dependencies if missing
+- Start both backend and frontend servers
+- Display URLs for accessing the application
+
+To stop the servers:
+- **macOS/Linux**: Press `Ctrl+C` in the terminal, or run `./stop.sh`
+- **Windows**: Press `Ctrl+C` in the terminal, or run `stop.bat`
+
+### Using Makefile
+
+Alternatively, you can use the Makefile:
+
+```bash
+# Install all dependencies
+make install
+
+# Start both servers
+make start
+
+# Or start individually
+make start-backend   # Backend only
+make start-frontend  # Frontend only
+
+# Stop all servers
+make stop
+
+# View backend logs
+make logs
+
+# Clean up temporary files
+make clean
+```
+
+### Manual Start
+
+If you prefer to start servers manually:
+
+1. **Start the Backend** (in the `backend` directory):
+   ```bash
+   # Activate virtual environment first
+   source venv/bin/activate  # or venv\Scripts\activate on Windows
+   
+   # Start the server
+   uvicorn api:app --reload --host 0.0.0.0 --port 8001
+   ```
+   
+   The backend API will be available at `http://localhost:8001`
+   API documentation (Swagger UI) at `http://localhost:8001/docs`
+
+2. **Start the Frontend** (in the `frontend` directory):
+   ```bash
+   npm run dev
+   ```
+   
+   The frontend will be available at `http://localhost:5173`
+
+3. **Open in Browser**:
+   Navigate to `http://localhost:5173`
 
 ## Overview
 
@@ -156,83 +234,6 @@ VITE_API_URL=http://localhost:8001
 
 For production, set this to your backend server URL.
 
-## Quick Start
-
-### Using Startup Scripts (Recommended)
-
-The easiest way to start the application is using the provided startup scripts:
-
-**On macOS/Linux:**
-```bash
-./start.sh
-```
-
-**On Windows:**
-```cmd
-start.bat
-```
-
-The startup script will:
-- Check prerequisites
-- Set up virtual environment if needed
-- Install dependencies if missing
-- Start both backend and frontend servers
-- Display URLs for accessing the application
-
-To stop the servers:
-- **macOS/Linux**: Press `Ctrl+C` in the terminal, or run `./stop.sh`
-- **Windows**: Press `Ctrl+C` in the terminal, or run `stop.bat`
-
-### Using Makefile
-
-Alternatively, you can use the Makefile:
-
-```bash
-# Install all dependencies
-make install
-
-# Start both servers
-make start
-
-# Or start individually
-make start-backend   # Backend only
-make start-frontend  # Frontend only
-
-# Stop all servers
-make stop
-
-# View backend logs
-make logs
-
-# Clean up temporary files
-make clean
-```
-
-### Manual Start
-
-If you prefer to start servers manually:
-
-1. **Start the Backend** (in the `backend` directory):
-   ```bash
-   # Activate virtual environment first
-   source venv/bin/activate  # or venv\Scripts\activate on Windows
-   
-   # Start the server
-   uvicorn api:app --reload --host 0.0.0.0 --port 8001
-   ```
-   
-   The backend API will be available at `http://localhost:8001`
-   API documentation (Swagger UI) at `http://localhost:8001/docs`
-
-2. **Start the Frontend** (in the `frontend` directory):
-   ```bash
-   npm run dev
-   ```
-   
-   The frontend will be available at `http://localhost:5173`
-
-3. **Open in Browser**:
-   Navigate to `http://localhost:5173`
 
 ## Usage Guide
 
