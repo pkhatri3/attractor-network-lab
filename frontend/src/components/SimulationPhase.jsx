@@ -17,15 +17,10 @@ import {
 import { getColormap } from "../components/Learningcolormaps";
 import { encodeMatrixToBase64 } from "../utils/ioUtils";
 import {
-  generateCapacityReportPdf,
-  generateRecallReportPdf,
+  generateReportPdf
 } from "./reportGenerator";
 
-
-
 const API_URL = import.meta.env.VITE_API_URL;
-
-  
 
 const ActivationLayout = ({
     inputMode,
@@ -49,7 +44,7 @@ const ActivationLayout = ({
     AHistLength,
     onIterationChange,
   }) => (
-    <div style={{ width: "100%", paddingTop: "60px", display: "flex", flexDirection: "column", gap: 20, pointerEvents: "auto", zIndex: 1 }}>
+    <div style={{ width: "100%", paddingTop: "20px", display: "flex", flexDirection: "column", gap: 4, pointerEvents: "auto", zIndex: 1 }}>
       
       {/* activation simulation controls */}
       <div style={{
@@ -58,170 +53,197 @@ const ActivationLayout = ({
         borderRadius: 16,
         padding: 20,
         display: "flex",
-        flexDirection: "row",
+        flexDirection: "column",
         gap: 20,
         width: "97%",
         flexShrink: 0,
         minHeight: 0,
       }}>
-        
-        <div style={{ width: "180px", display: "flex", flexDirection: "column", gap: 12 }}>
-          <div style={{ fontSize: 12, color: "#ccc", fontWeight: 700 }}>Activations Display Format</div>
+        <div style={{ display: "flex", flexDirection: "row", gap: 20, width: "100%" }}>
+          <div style={{ width: "180px", display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ fontSize: 12, color: "#ccc", fontWeight: 700 }}>Activations Display Format</div>
 
-          <div style={{ display: "flex", gap: 4 }}>
+            <div style={{ display: "flex", gap: 4 }}>
+              <button
+                onClick={() => setInputMode("text")}
+                style={{
+                  flex: 1,
+                  padding: "6px 8px",
+                  borderRadius: 6,
+                  border: inputMode === "text" ? "2px solid #1a6fd6" : "1px solid #ccc",
+                  background: inputMode === "text" ? "#1a6fd6" : "transparent",
+                  color: inputMode === "text" ? "#fff" : "#eaf4ff",
+                  cursor: capacityTestActive ? "not-allowed" : "pointer",
+                  fontSize: 12,
+                  fontWeight: 600,
+                }}
+              >
+                Text
+              </button>
+
+              <button
+                onClick={() => setInputMode("matrix")}
+                style={{
+                  flex: 1,
+                  padding: "6px 8px",
+                  borderRadius: 6,
+                  border: inputMode === "matrix" ? "2px solid #1a6fd6" : "1px solid #ccc",
+                  background: inputMode === "matrix" ? "#1a6fd6" : "transparent",
+                  color: inputMode === "matrix" ? "#fff" : "#eaf4ff",
+                  cursor: "pointer",
+                  fontSize: 12,
+                  fontWeight: 600,
+                }}
+              >
+                Matrix
+              </button>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "#eaf4ff" }}>
+              <input
+                type="checkbox"
+                checked={granularMode}
+                onChange={(e) => setGranularMode(e.target.checked)}
+                disabled={isSimulating || hasRun}
+                style={{ cursor: "pointer" }}
+              />
+              <span>Granular Updates</span>
+            </div>
+
             <button
-              onClick={() => setInputMode("text")}
+              onClick={onStartSimulation}
+              disabled={!canSimulate || isSimulating || hasRun}
               style={{
-                flex: 1,
-                padding: "6px 8px",
-                borderRadius: 6,
-                border: inputMode === "text" ? "2px solid #1a6fd6" : "1px solid #ccc",
-                background: inputMode === "text" ? "#1a6fd6" : "transparent",
-                color: inputMode === "text" ? "#fff" : "#eaf4ff",
-                cursor: capacityTestActive ? "not-allowed" : "pointer",
-                fontSize: 12,
+                padding: 8,
+                borderRadius: 8,
+                background:
+                  canSimulate && !isSimulating && !hasRun ? "#1a6fd6" : "#555",
+                color: "#fff",
                 fontWeight: 600,
+                cursor:
+                  canSimulate && !isSimulating && !hasRun ? "pointer" : "not-allowed",
               }}
             >
-              Text
+              Start
             </button>
 
             <button
-              onClick={() => setInputMode("matrix")}
+              onClick={handleReset}
+              disabled={!isSimulating && !hasRun}
               style={{
-                flex: 1,
-                padding: "6px 8px",
-                borderRadius: 6,
-                border: inputMode === "matrix" ? "2px solid #1a6fd6" : "1px solid #ccc",
-                background: inputMode === "matrix" ? "#1a6fd6" : "transparent",
-                color: inputMode === "matrix" ? "#fff" : "#eaf4ff",
-                cursor: "pointer",
-                fontSize: 12,
+                padding: 8,
+                borderRadius: 8,
+                background: isSimulating || hasRun ? "#1a6fd6" : "#555",
+                cursor: isSimulating || hasRun ? "pointer" : "not-allowed",
+                color: "#fff",
                 fontWeight: 600,
               }}
             >
-              Matrix
+              Reset
             </button>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "#eaf4ff" }}>
-            <input
-              type="checkbox"
-              checked={granularMode}
-              onChange={(e) => setGranularMode(e.target.checked)}
-              disabled={isSimulating || hasRun}
-              style={{ cursor: "pointer" }}
-            />
-            <span>Granular Updates</span>
-          </div>
-
-          <button
-            onClick={onStartSimulation}
-            disabled={!canSimulate || isSimulating || hasRun}
+          <div
             style={{
-              padding: 8,
-              borderRadius: 8,
-              background:
-                canSimulate && !isSimulating && !hasRun ? "#1a6fd6" : "#555",
-              color: "#fff",
-              fontWeight: 600,
-              cursor:
-                canSimulate && !isSimulating && !hasRun ? "pointer" : "not-allowed",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              flex: "1 1 0px",
+              minWidth: 0,
             }}
           >
-            Start
-          </button>
+            {inputMode === "text" ? (
+              <>
+                <div style={{ width: "82%", display: "flex", justifyContent: "center" }}>
+                  <StateImporter
+                    expectedN={neuronCount}
+                    disabled={isSimulating || hasRun}
+                    onImportState={(row) => {
+                      if (!isSimulating && !hasRun) {
+                        setAvec(row);
+                        setAtext(JSON.stringify(row));
+                      }
+                    }}
+                  />
+                </div>
 
-          <button
-            onClick={handleReset}
-            disabled={!isSimulating && !hasRun}
-            style={{
-              padding: 8,
-              borderRadius: 8,
-              background: isSimulating || hasRun ? "#1a6fd6" : "#555",
-              cursor: isSimulating || hasRun ? "pointer" : "not-allowed",
-              color: "#fff",
-              fontWeight: 600,
-            }}
-          >
-            Reset
-          </button>
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            flex: "1 1 0px",
-            minWidth: 0,
-          }}
-        >
-          {inputMode === "text" ? (
-            <>
-              <div style={{ width: "82%", display: "flex", justifyContent: "center" }}>
-                <StateImporter
-                  expectedN={neuronCount}
+                <textarea
+                  value={Atext}
+                  onChange={(e) => handleTextChange(e.target.value)}
+                  rows={6}
                   disabled={isSimulating || hasRun}
-                  onImportState={(row) => {
+                  className="mono"
+                  style={{
+                    width: "80%",
+                    padding: 8,
+                    borderRadius: 10,
+                    marginTop: 10,
+                    background: "rgba(255,255,255,0.06)",
+                    color: "#eaf4ff",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                  }}
+                />
+
+                <div style={{ marginTop: 8, fontSize: 13, color: "#aaa" }}>
+                  Iteration {iter}
+                </div>
+              </>
+            ) : (
+            <div
+              style={{
+                width: "100%",
+                overflowX: "auto",
+                paddingBottom: 4,
+              }}
+            >
+              <div style={{ minWidth: 480 }}>
+                <StatePicker
+                  neuronCount={neuronCount}
+                  externalState={(isSimulating || hasRun) && AHist[iter] ? AHist[iter] : null}
+                  cursor={(isSimulating || hasRun) ? 'not-allowed' : 'pointer'}
+                  approxContainerWidth={480}
+                  initialState={Avec}
+                  disabled={isSimulating || hasRun}
+                  iteration={(isSimulating || hasRun) ? iter : null}
+                  onStateChange={(newState) => {
                     if (!isSimulating && !hasRun) {
-                      setAvec(row);
-                      setAtext(JSON.stringify(row));
+                      setAvec(newState);
+                      setAtext(JSON.stringify(newState));
                     }
                   }}
                 />
               </div>
+            </div>
+            )}
+          </div>
+        </div>
 
-              <textarea
-                value={Atext}
-                onChange={(e) => handleTextChange(e.target.value)}
-                rows={6}
-                disabled={isSimulating || hasRun}
-                className="mono"
+        {AHistLength > 0 &&
+          onIterationChange &&
+          !isSimulating &&
+          hasRun && (
+            <div style={{ width: "100%" }}>
+              <div
                 style={{
-                  width: "80%",
-                  padding: 8,
-                  borderRadius: 10,
-                  marginTop: 10,
-                  background: "rgba(255,255,255,0.06)",
-                  color: "#eaf4ff",
-                  border: "1px solid rgba(255,255,255,0.12)",
+                  fontSize: 12,
+                  color: "#aaa",
+                  marginBottom: 4,
                 }}
-              />
-
-              <div style={{ marginTop: 8, fontSize: 13, color: "#aaa" }}>
-                Iteration {iter}
+              >
+                View iteration: {iter} / {AHistLength - 1}
               </div>
-            </>
-          ) : (
-  <div
-    style={{
-      width: "100%",
-      overflowX: "auto",   // <- scroll instead of stretching
-      paddingBottom: 4,
-    }}
-  >
-  
-            <div style={{ minWidth: 480 }}>
-      <StatePicker
-        neuronCount={neuronCount}
-        externalState={(isSimulating || hasRun) && AHist[iter] ? AHist[iter] : null}
-        cursor={(isSimulating || hasRun) ? 'not-allowed' : 'pointer'}
-        approxContainerWidth={480}
-        initialState={Avec}
-        disabled={isSimulating || hasRun}
-        iteration={(isSimulating || hasRun) ? iter : null}
-        onStateChange={(newState) => {
-          if (!isSimulating && !hasRun) {
-            setAvec(newState);
-            setAtext(JSON.stringify(newState));
-          }
-        }}
-      />
-    </div>
-        </div>
+              <input
+                type="range"
+                min={0}
+                max={Math.max(0, AHistLength - 1)}
+                value={iter}
+                onChange={(e) =>
+                  onIterationChange(Number(e.target.value))
+                }
+                style={{ width: "100%" }}
+              />
+            </div>
           )}
-        </div>
       </div>
       
       {/* Energy graph */}
@@ -285,34 +307,6 @@ const ActivationLayout = ({
                 </LineChart>
               </ResponsiveContainer>
             </div>
-
-            {/* NEW: iteration scroll bar after simulation ends */}
-            {AHistLength > 0 &&
-              onIterationChange &&
-              !isSimulating &&
-              hasRun && (
-                <div style={{ marginTop: 16 }}>
-                  <div
-                    style={{
-                      fontSize: 12,
-                      color: "#aaa",
-                      marginBottom: 4,
-                    }}
-                  >
-                    View iteration: {iter} / {AHistLength - 1}
-                  </div>
-                  <input
-                    type="range"
-                    min={0}
-                    max={Math.max(0, AHistLength - 1)}
-                    value={iter}
-                    onChange={(e) =>
-                      onIterationChange(Number(e.target.value))
-                    }
-                    style={{ width: "100%" }}
-                  />
-                </div>
-              )}
           </>
         ) : (
           <div
@@ -335,14 +329,12 @@ const CapacityLayout = ({
     setCapacityNoiseLevel,
     capacityIterations,
     setCapacityIterations,
-    capacityErrorTolerance,
-    setCapacityErrorTolerance,
     capacityTestActive,
     capacityResults,
     handleRunCapacityTest,
     panel
   }) => (
-    <div style={{ width: "96%", marginTop: "120px", display: "flex", flexDirection: "column", gap: 20, border: "1px solid rgba(255,255,255,0.1)",
+    <div style={{ width: "96%", marginTop: "20px", display: "flex", flexDirection: "column", gap: 20, border: "1px solid rgba(255,255,255,0.1)",
         borderRadius: 16,
         padding: 20, }}>
       
@@ -370,7 +362,7 @@ const CapacityLayout = ({
         </div>
 
         <div style={{ marginBottom: 20 }}>
-          <div style={{ fontSize: 13, marginBottom: 6 }}>Iterations per Point: {capacityIterations}</div>
+          <div style={{ fontSize: 13, marginBottom: 6 }}>Trials per Data Point: {capacityIterations}</div>
           <input
             type="range"
             min={1}
@@ -381,22 +373,8 @@ const CapacityLayout = ({
             disabled={capacityTestActive}
             style={{ width: "100%" }}
           />
-        </div>
-
-        <div style={{ marginBottom: 20 }}>
-          <div style={{ fontSize: 13, marginBottom: 6 }}>Error Tolerance: {(capacityErrorTolerance * 100).toFixed(0)}%</div>
-          <input
-            type="range"
-            min={0}
-            max={0.5}
-            step={0.01}
-            value={capacityErrorTolerance}
-            onChange={e => setCapacityErrorTolerance(Number(e.target.value))}
-            disabled={capacityTestActive}
-            style={{ width: "100%" }}
-          />
           <div style={{ fontSize: 11, color: "#888", marginTop: 4 }}>
-            Recalls with up to {(capacityErrorTolerance * 100).toFixed(0)}% mismatched bits will be counted as successful
+            Number of repeated simulations used to compute an averaged value for each data point.
           </div>
         </div>
 
@@ -536,23 +514,6 @@ const CapacityLayout = ({
       boxSizing: "border-box",
     }}
   >
-    {/* simple close row */}
-    <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
-      <button
-        onClick={() => setDrawerOpen(false)}
-        style={{
-          padding: "4px 6px",
-          borderRadius: 6,
-          background: "rgba(255,255,255,0.12)",
-          color: "#fff",
-          border: "none",
-          cursor: "pointer",
-          fontSize: 12,
-        }}
-      >
-        ❯
-      </button>
-    </div>
 
     {/* W */}
     <div style={panel}>
@@ -921,7 +882,7 @@ function WeightsCanvas({ matrix, size = 500, scaleFactor = 2, cmapName = "blueWh
 }
 
 export default function SimulationPhase() {
-  const { network, graphVersion } = useContext(GraphContext);
+  const { network, graphVersion, captureImage } = useContext(GraphContext);
   const {
     WHist,
     memories,
@@ -943,7 +904,6 @@ export default function SimulationPhase() {
     capacityResults, setCapacityResults,
     capacityNoiseLevel, setCapacityNoiseLevel,
     capacityIterations, setCapacityIterations,
-    capacityErrorTolerance, setCapacityErrorTolerance,
     capacityTestActive, setCapacityTestActive,
     simulationNoiseLevel, setSimulationNoiseLevel,
     initialA, setInitialA,
@@ -1080,7 +1040,6 @@ export default function SimulationPhase() {
         scale: 1.0,
         rule: "standard",
         noise_level: capacityNoiseLevel,
-        error_tolerance: capacityErrorTolerance,
         max_iters: 50,
         iterations: capacityIterations,
         update_type: getUpdateType(activationRule),
@@ -1414,93 +1373,6 @@ export default function SimulationPhase() {
   } catch {
     parsedMems = [];
   }
-
-    const computeWeightStatsForReport = (matrix) => {
-      if (!matrix || !matrix.length || !matrix[0].length) return null;
-      const rows = matrix.length;
-      const cols = matrix[0].length;
-      const total = rows * cols;
-
-      let min = Infinity;
-      let max = -Infinity;
-      let sum = 0;
-      let sumSq = 0;
-      let pos = 0;
-      let neg = 0;
-      let zero = 0;
-
-      for (let r = 0; r < rows; r++) {
-        const row = matrix[r];
-        for (let c = 0; c < cols; c++) {
-          const v = row[c];
-          if (v < min) min = v;
-          if (v > max) max = v;
-          sum += v;
-          sumSq += v * v;
-          if (v > 0) pos++;
-          else if (v < 0) neg++;
-          else zero++;
-        }
-      }
-
-      const mean = sum / total;
-      const variance = sumSq / total - mean * mean;
-      const std = Math.sqrt(Math.max(0, variance));
-
-      return {
-        min,
-        max,
-        mean,
-        std,
-        posPct: (pos / total) * 100,
-        negPct: (neg / total) * 100,
-        zeroPct: (zero / total) * 100,
-      };
-    };
-
-    const handleGenerateReport = async (overrideName) => {
-        const parsedMemories = getParsedMemories();
-        const memCountForSummary = Array.isArray(parsedMemories)
-          ? parsedMemories.length
-          : 0;
-
-        const finalName = overrideName || experimentName || "Untitled Experiment";
-
-        if (simulationMode === "capacity") {
-          const learningInfo = {
-            rule: rule || "Standard Hebbian",
-            learningRate: learningRate || 0.25,
-            scale: scale || 1.0,
-            backend: backend || "numpy",
-            numNeurons: neuronCount,
-            numMemories: memCountForSummary,
-            colorMap: learningColorScheme || "blueWhiteRed",
-          };
-
-          await generateCapacityReportPdf({
-            experimentName: finalName,
-            activationRule,
-            capacityNoiseLevel,
-            capacityErrorTolerance,
-            capacityResults,
-            weightsCanvas: weightsCanvasRef.current,
-            chartElement: capacityChartRef.current,
-            finalW,
-            learningInfo,
-          });
-        } else {
-          await generateRecallReportPdf({
-            experimentName: finalName,
-            activationRule,
-            AHist,
-            Avec,
-            energyHist,
-          });
-        }
-      };
-
-
-
     const confirmReportNameAndGenerate = () => {
       const finalExperimentName =
         reportExperimentInput.trim() || experimentName || "Untitled Experiment";
@@ -1515,51 +1387,32 @@ export default function SimulationPhase() {
           ? reportFileNameInput.trim()
           : defaultFileBase;
 
+      const parsedMemories = getParsedMemories();
+
+      const graphImage = captureImage ? captureImage() : null;
+
       setExperimentName(finalExperimentName);
       setShowReportModal(false);
 
-      if (simulationMode === "capacity") {
-        const parsedMemories = getParsedMemories();
-        const memCountForSummary = Array.isArray(parsedMemories)
-          ? parsedMemories.length
-          : 0;
-
-        const learningInfo = {
-          rule: rule || "Standard Hebbian",
-          learningRate: learningRate || 0.25,
-          scale: scale || 1.0,
-          backend: backend || "numpy",
-          numNeurons: neuronCount,
-          numMemories: memCountForSummary,
-          colorMap: learningColorScheme || "blueWhiteRed",
-        };
-
-        generateCapacityReportPdf({
-          experimentName: finalExperimentName,
-          activationRule,
-          capacityNoiseLevel,
-          capacityErrorTolerance,
-          capacityResults,
-          finalW,
-          learningInfo,
-          fileName: finalFileName,
-          weightsCanvas: weightsCanvasRef.current,
-        });
-      } else {
-        generateRecallReportPdf({
-          experimentName: finalExperimentName,
-          activationRule,
-          AHist,
-          Avec,
-          energyHist,
-          fileName: finalFileName,
-        });
-      }
+      generateReportPdf({
+        type: simulationMode,
+        experimentName: finalExperimentName,
+        activationRule,
+        AHist,
+        Avec,
+        energyHist,
+        noise: capacityNoiseLevel,
+        trialsPerDataPoint: capacityIterations,
+        finalW,
+        weightsCanvas: weightsCanvasRef.current,
+        parsedMemories: parsedMemories,
+        learningRule: rule,
+        learningRate: learningRate,
+        scale: scale,
+        graphImage,
+        fileName: finalFileName,
+      });
     };
-
-
-
-
 
     return (
     <div
@@ -1629,7 +1482,7 @@ export default function SimulationPhase() {
           padding: "10px 12px",
           borderRadius: 12,
           border: "1px solid rgba(255,255,255,0.12)",
-          background: drawerOpen ? "#555" : "#1a6fd6",
+          background: "#1a6fd6",
           color: "#eaf4ff",
           fontWeight: 600,
           zIndex: 10,
@@ -1666,7 +1519,6 @@ export default function SimulationPhase() {
               border: "1px solid rgba(255,255,255,0.1)",
               borderRadius: 16,
               padding: 20,
-              marginBottom: 20,
               display: "flex",
               gap: 20,
               alignItems: "flex-end",
@@ -1784,8 +1636,6 @@ export default function SimulationPhase() {
               setCapacityNoiseLevel={setCapacityNoiseLevel}
               capacityIterations={capacityIterations}
               setCapacityIterations={setCapacityIterations}
-              capacityErrorTolerance={capacityErrorTolerance}
-              setCapacityErrorTolerance={setCapacityErrorTolerance}
               capacityTestActive={capacityTestActive}
               capacityResults={capacityResults}
               handleRunCapacityTest={handleRunCapacityTest}
@@ -2027,8 +1877,6 @@ export default function SimulationPhase() {
             />
           </div>
         )}
-
-
 
     </div>
   );

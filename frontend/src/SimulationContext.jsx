@@ -21,7 +21,7 @@ export function SimulationProvider({ children }) {
   const [simulationNoiseLevel, setSimulationNoiseLevel] = useState(0);
   const [capacityTestActive, setCapacityTestActive] = useState(false);
   const [initialA, setInitialA] = useState(null);
-  const [inputMode, setInputMode] = useState("text");
+  const [inputMode, setInputMode] = useState("matrix");
   const [isSimulating, setIsSimulating] = useState(false);
   const [error, setError] = useState(null);
   const [layoutChoice, setLayoutChoice] = useState(null);
@@ -46,7 +46,7 @@ export function SimulationProvider({ children }) {
     setSimulationNoiseLevel(0);
     setCapacityTestActive(false);
     setInitialA(null);
-    setInputMode("text");
+    setInputMode("matrix");
     setIsSimulating(false);
     setError(null);
     setLayoutChoice(null);

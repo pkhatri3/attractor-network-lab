@@ -284,7 +284,7 @@ input: {
   },
 
   sectionTitle: {
-    fontSize: 13,
+    fontSize: 20,
     fontWeight: 600,
   },
 
