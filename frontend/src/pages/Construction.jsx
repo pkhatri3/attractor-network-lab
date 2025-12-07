@@ -61,6 +61,8 @@ const graphRefs = useRef({});
 // Keeps track of the previous grid mode value for detecting changes
 const prevGridModeRef = useRef(gridMode);
 
+const [captureImage, setCaptureImage] = useState(null);
+
 // The next consts are helper functions for graph operations
 
 // Clears the current graph (nodes + edges) when invoked
@@ -193,7 +195,10 @@ const handleToggleGrid = () => {
         selectedTemplate={selectedTemplate}
         customTemplates={customTemplates}
         onClearGraph={(fn) => (clearGraphFnRef.current = fn)}
-        onGraphRefs={(refs) => (graphRefs.current = refs)}
+        onGraphRefs={(refs) => {
+          graphRefs.current = refs
+          setCaptureImage(refs.captureImage);
+        }}
       />
     </div>
   );

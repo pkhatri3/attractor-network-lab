@@ -401,7 +401,23 @@ export default function GraphCanvas({
   }, [gridMode]);
 
   useEffect(() => {
-    if (typeof onGraphRefs === "function") onGraphRefs({ graphRef, sigmaRef });
+    if (typeof onGraphRefs === "function") {
+      onGraphRefs({
+        graphRef,
+        sigmaRef,
+        captureImage: () => {
+          try {
+            const renderer = sigmaRef.current?.getRenderer?.();
+            if (!renderer) return null;
+            const canvas = renderer.getCanvas();
+            return canvas.toDataURL("image/png");
+          } catch (err) {
+            console.error("Failed to capture graph image:", err);
+            return null;
+          }
+        },
+      });
+    }
   }, [onGraphRefs]);
 
   // Drop a user-provided network (nodes/edges or adjacency matrix) at point p

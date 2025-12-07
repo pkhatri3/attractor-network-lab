@@ -182,7 +182,6 @@ export const generateCapacityReportPdf = ({
   experimentName,
   activationRule,
   capacityNoiseLevel,
-  capacityErrorTolerance,
   capacityResults,
   finalW,
   learningInfo,
@@ -241,17 +240,6 @@ export const generateCapacityReportPdf = ({
     margin,
     y
   );
-  y += lineHeight;
-
-  doc.text(
-    `Error Tolerance: ${
-      capacityErrorTolerance != null
-        ? (capacityErrorTolerance * 100).toFixed(0) + "%"
-        : "0%"
-    }`,
-    margin,
-    y
-  );
   y += lineHeight * 2;
 
   // Learning phase info
@@ -285,8 +273,7 @@ export const generateCapacityReportPdf = ({
     y += lineHeight / 2;
   }
 
-
-
+addNewPageIfNeeded(lineHeight * 3);
 y = drawSectionHeader(doc, "Weight Matrix", margin, y);
 
 if (finalW && finalW.length && finalW[0].length) {
@@ -359,6 +346,7 @@ if (finalW && finalW.length && finalW[0].length) {
 
 
   // Capacity plot
+  addNewPageIfNeeded(lineHeight * 3);
   y = drawSectionHeader(doc, "Capacity Plot", margin, y);
 
   if (capacityResults && capacityResults.length) {
@@ -393,12 +381,22 @@ if (finalW && finalW.length && finalW[0].length) {
   doc.save(finalName);
 };
 
-export const generateRecallReportPdf = ({
+export const generateReportPdf = ({
+  type,
   experimentName,
   activationRule,
   AHist,
   Avec,
   energyHist,
+  noise,
+  trialsPerDataPoint,
+  finalW,
+  weightsCanvas,
+  parsedMemories,
+  learningRule,
+  learningRate,
+  scale,
+  graphImage,
   fileName,
 }) => {
   const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
@@ -439,63 +437,167 @@ export const generateRecallReportPdf = ({
   doc.text(safeText("Activation Rule", activationRule), margin, y);
   y += lineHeight;
 
-  const steps = AHist && AHist.length ? AHist.length - 1 : 0;
-  doc.text(`Number of steps needed to converge: ${steps}`, margin, y);
-  y += lineHeight * 2;
-
-  // Energy plot
-  y = drawSectionHeader(doc, "Energy Plot", margin, y);
-
-  if (energyHist && energyHist.length) {
-    const xs = energyHist.map((_, i) => i);
-    const ys = energyHist;
-
-    addNewPageIfNeeded(260);
-    y = drawLinePlotWithAxes(
-      doc,
-      margin,
-      y,
-      pageWidth - margin * 2,
-      200,
-      xs,
-      ys,
-      "Timestep",
-      "Energy"
-    );
-  } else {
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(12);
-    doc.setTextColor(100, 100, 100);
-    doc.text("No energy data available.", margin, y);
-    y += lineHeight * 2;
-  }
-
-  // States
-  y = drawSectionHeader(doc, "State Evolution", margin, y);
-
-  const states =
-    AHist && AHist.length ? AHist : Avec && Avec.length ? [Avec] : [];
-  const allStates = states || [];
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.setTextColor(60, 60, 60);
-
-  allStates.forEach((state, idx) => {
-    if (!Array.isArray(state) || !state.length) return;
-
-    addNewPageIfNeeded(lineHeight * 3);
-    doc.setFontSize(11);
-    doc.setTextColor(40, 40, 40);
-    doc.text(`Iteration ${idx}:`, margin, y);
+  if (type === "capacity") {
+    doc.text(`Noise: ${noise}`, margin, y);
     y += lineHeight;
 
-    const cols = pickMatrixCols(state.length);
-    const chunks = chunkArray(state, cols);
+    doc.text(`Trials per Data Point: ${trialsPerDataPoint}`, margin, y);
+    y += lineHeight * 2;
+  } else {
+    const steps = AHist && AHist.length ? AHist.length - 1 : 0;
+    doc.text(`Number of steps needed to converge: ${steps}`, margin, y);
+    y += lineHeight * 2;
 
+    // States
+    addNewPageIfNeeded(lineHeight * 3);
+    y = drawSectionHeader(doc, "State Evolution", margin, y);
+
+    const states =
+      AHist && AHist.length ? AHist : Avec && Avec.length ? [Avec] : [];
+    const allStates = states || [];
+
+    doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
     doc.setTextColor(60, 60, 60);
 
+    allStates.forEach((state, idx) => {
+      if (!Array.isArray(state) || !state.length) return;
+
+      addNewPageIfNeeded(lineHeight * 3);
+      doc.setFontSize(12);
+      doc.setTextColor(40, 40, 40);
+      doc.text(`Iteration ${idx}:`, margin, y);
+      y += lineHeight;
+
+      const cols = pickMatrixCols(state.length);
+      const chunks = chunkArray(state, cols);
+
+      doc.setFontSize(9);
+      doc.setTextColor(60, 60, 60);
+
+      chunks.forEach((chunk) => {
+        addNewPageIfNeeded(lineHeight);
+        doc.text(chunk.join(" "), margin + 20, y);
+        y += lineHeight;
+      });
+
+      y += 6;
+    });
+
+    // Energy plot
+    addNewPageIfNeeded(lineHeight * 3);
+    y = drawSectionHeader(doc, "Energy Plot", margin, y);
+
+    if (energyHist && energyHist.length) {
+      const xs = energyHist.map((_, i) => i);
+      const ys = energyHist;
+
+      addNewPageIfNeeded(260);
+      y = drawLinePlotWithAxes(
+        doc,
+        margin,
+        y,
+        pageWidth - margin * 2,
+        200,
+        xs,
+        ys,
+        "Timestep",
+        "Energy"
+      );
+    } else {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(12);
+      doc.setTextColor(100, 100, 100);
+      doc.text("No energy data available.", margin, y);
+      y += lineHeight * 2;
+    }
+  }
+
+  y += lineHeight;
+
+  // Weights Matrix
+  addNewPageIfNeeded(lineHeight * 3);
+  y = drawSectionHeader(doc, "Weights Matrix", margin, y);
+
+  if (finalW && finalW.length && finalW[0].length) {
+    const stats = computeWeightStats(finalW);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(12);
+    doc.setTextColor(40, 40, 40);
+
+    const rows = finalW.length;
+    const cols = finalW[0].length;
+    
+    doc.text(`Shape: ${rows} × ${cols}`, margin, y);
+    y += lineHeight;
+
+    if (stats) {
+      doc.text(
+        `Min: ${stats.min.toFixed(2)}   Max: ${stats.max.toFixed(
+          2
+        )}   Mean: ${stats.mean.toFixed(2)}   Std: ${stats.std.toFixed(2)}`,
+        margin,
+        y
+      );
+      y += lineHeight;
+
+      doc.text(
+        `Sign distribution: + ${stats.posPct.toFixed(
+          1
+        )}%   - ${stats.negPct.toFixed(1)}%   0 ${stats.zeroPct.toFixed(1)}%`,
+        margin,
+        y
+      );
+      y += lineHeight * 1.5;
+    }
+
+    
+    if (weightsCanvas) {
+      const imgData = weightsCanvas.toDataURL("image/png");
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const targetWidth = pageWidth - margin * 2; // fit page width
+      const aspect = weightsCanvas.height / weightsCanvas.width || 1;
+      const targetHeight = targetWidth * aspect;
+
+      addNewPageIfNeeded(targetHeight + lineHeight);
+      doc.addImage(imgData, "PNG", margin, y, targetWidth, targetHeight);
+      y += targetHeight + lineHeight;
+    } else {
+      
+      doc.setFontSize(12);
+      doc.setTextColor(100, 100, 100);
+      doc.text(
+        "Heatmap view not available (weights canvas missing).",
+        margin,
+        y
+      );
+      y += lineHeight * 2;
+    }
+  }
+
+  // Memories
+  y += lineHeight;
+
+  addNewPageIfNeeded(lineHeight * 3);
+  y = drawSectionHeader(doc, "Memories", margin, y);
+
+  const mems = Array.isArray(parsedMemories) ? parsedMemories : [];
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(12);
+  doc.text(`Number of Memories: ${mems.length}`, margin, y);
+  y += lineHeight;
+
+  mems.forEach((mem, idx) => {
+    addNewPageIfNeeded(lineHeight * 2);
+    doc.setFontSize(12);
+    doc.text(`Memory ${idx + 1}:`, margin, y);
+    y += lineHeight;
+
+    const cols = pickMatrixCols(mem.length);
+    const chunks = chunkArray(mem, cols);
+
+    doc.setFontSize(9);
     chunks.forEach((chunk) => {
       addNewPageIfNeeded(lineHeight);
       doc.text(chunk.join(" "), margin + 20, y);
@@ -504,6 +606,42 @@ export const generateRecallReportPdf = ({
 
     y += 6;
   });
+
+  y += lineHeight;
+
+  // Learning Params
+  addNewPageIfNeeded(lineHeight * 3);
+  y = drawSectionHeader(doc, "Learning Parameters", margin, y);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(12);
+  doc.setTextColor(40, 40, 40);
+
+  doc.text(`Learning Rule: ${learningRule}`, margin, y);
+  y += lineHeight;
+
+  doc.text(`Learning Rate: ${learningRate}`, margin, y);
+  y += lineHeight;
+
+  doc.text(`Scale: ${scale}`, margin, y);
+  y += lineHeight * 2;
+
+  // Network Visualization
+  if (graphImage) {
+    addNewPageIfNeeded(300);
+    y = drawSectionHeader(doc, "Network Visualization", margin, y);
+
+    const targetWidth = pageWidth - margin * 2;
+    const targetHeight = targetWidth * 0.6; // keep aspect ratio
+
+    doc.addImage(graphImage, "PNG", margin, y, targetWidth, targetHeight);
+
+    y += targetHeight + lineHeight;
+  } else {
+    y = drawSectionHeader(doc, "Network Visualization", margin, y);
+    doc.text("No network visualization available.", margin, y);
+    y += lineHeight;
+  }
 
   const baseName =
     fileName && fileName.trim().length ? fileName.trim() : "memory_recall_report";
