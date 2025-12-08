@@ -224,8 +224,8 @@ export default function StatePicker({
               if (isReal) {
                   if (typeof val === 'number') {
                       const formatted = val.toFixed(2);
+                      // for a cleaner look, remove .00 for integers
                       if (formatted.endsWith('.00')) {
-                          // It's effectively an integer (e.g. "1.00", "-1.00")
                           displayVal = formatted.slice(0, -3);
                           if (displayVal === "-0") displayVal = "0";
                       } else {
