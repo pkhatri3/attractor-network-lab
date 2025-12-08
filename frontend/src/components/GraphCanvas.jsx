@@ -401,30 +401,7 @@ export default function GraphCanvas({
   }, [gridMode]);
 
   useEffect(() => {
-    if (typeof onGraphRefs !== "function") return;
-
-    onGraphRefs({
-      graphRef,
-      sigmaRef,
-      captureImage: () => {
-        try {
-          const container = containerRef.current;
-          if (!container) return null;
-
-          // wait for sigma to render
-          const canvas = container.querySelector("canvas");
-          if (!canvas) {
-            console.warn("No sigma canvas yet — returning null");
-            return null;
-          }
-
-          return canvas.toDataURL("image/png");
-        } catch (err) {
-          console.error("Screenshot error:", err);
-          return null;
-        }
-      }
-    });
+    if (typeof onGraphRefs === "function") onGraphRefs({ graphRef, sigmaRef });
   }, [onGraphRefs]);
 
   // Drop a user-provided network (nodes/edges or adjacency matrix) at point p

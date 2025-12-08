@@ -1,4 +1,4 @@
-import React, { createContext, useState, useRef } from "react";
+import React, { createContext, useState } from "react";
 
 export const GraphContext = createContext();
 
@@ -7,7 +7,6 @@ export function GraphProvider({ children }) {
   const [graphVersion, setGraphVersion] = useState(0);
   const [learningVersion, setLearningVersion] = useState(0);
   const [customTemplates, setCustomTemplates] = useState([]);
-  const captureImageRef = useRef(null);
 
   const commitGraph = (serializedGraph) => {
     // only increment if the graph actually changed
@@ -36,7 +35,6 @@ export function GraphProvider({ children }) {
         markLearningRestart,
         customTemplates,
         setCustomTemplates,
-        captureImageRef,
       }}
     >
       {children}

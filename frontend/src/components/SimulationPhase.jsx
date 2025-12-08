@@ -33,6 +33,7 @@ const ActivationLayout = ({
     handleReset,
     neuronCount,
     Atext,
+    setAtext,
     handleTextChange,
     Avec,
     setAvec,
@@ -882,18 +883,15 @@ function WeightsCanvas({ matrix, size = 500, scaleFactor = 2, cmapName = "blueWh
 }
 
 export default function SimulationPhase() {
-  const { network, captureImageRef } = useContext(GraphContext);
-  console.log("SimulationPhase captureImage function:", captureImageRef);
+  const { network } = useContext(GraphContext);
   const {
     WHist,
     memories,
-    learningRunVersion,
     learningColorScheme,
     networkId,
     rule,
     learningRate,
     scale,
-    backend,
   } = useContext(LearningContext);
 
   const {
@@ -1217,11 +1215,6 @@ export default function SimulationPhase() {
     }
   }, []); // runs only on first mount
 
-  useEffect(() => {
-        console.log("SimulationPhase mounted");
-        return () => console.log("SimulationPhase unmounted");
-      }, []);
-
   // default to the latest memory
   useEffect(() => {
     let parsed = [];
@@ -1390,10 +1383,6 @@ export default function SimulationPhase() {
 
       const parsedMemories = getParsedMemories();
 
-      const graphImage = captureImageRef?.current || null;
-      console.log("GraphContext.captureImageRef.current =", captureImageRef.current);
-      console.log("Screenshot at report time:", graphImage);
-
       setExperimentName(finalExperimentName);
       setShowReportModal(false);
 
@@ -1406,13 +1395,13 @@ export default function SimulationPhase() {
         energyHist,
         noise: capacityNoiseLevel,
         trialsPerDataPoint: capacityIterations,
+        capacityResults,
         finalW,
         weightsCanvas: weightsCanvasRef.current,
         parsedMemories: parsedMemories,
         learningRule: rule,
         learningRate: learningRate,
         scale: scale,
-        graphImage,
         fileName: finalFileName,
       });
     };
@@ -1615,6 +1604,7 @@ export default function SimulationPhase() {
             handleReset={handleReset}
             neuronCount={neuronCount}
             Atext={Atext}
+            setAtext={setAtext}
             handleTextChange={handleTextChange}
             Avec={Avec}
             setAvec={setAvec}
