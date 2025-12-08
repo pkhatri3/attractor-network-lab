@@ -338,7 +338,8 @@ class attractorNet(object):
                 A_binary = np.sign(self.A) + (self.A == 0)
                 if all(A_binary == Aold):
                     moretodo = False
-                Aold = deepcopy(A_binary)
+
+                Aold = self.A.copy()
 
 
 def learning_example():
