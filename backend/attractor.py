@@ -335,16 +335,8 @@ class attractorNet(object):
                     A_binary = np.sign(self.A) + (self.A == 0)
                     yield {"t": t, "E": float(self.E), "A": A_binary.tolist()}
 
-<<<<<<< HEAD
                 A_binary = np.sign(self.A) + (self.A == 0)
                 if all(A_binary == Aold):
-=======
-                # Convergence check
-                A_binary = np.sign(self.A)
-                Aold_binary = np.sign(Aold)
-
-                if np.all(A_binary == Aold_binary):
->>>>>>> dev
                     moretodo = False
 
                 Aold = self.A.copy()
