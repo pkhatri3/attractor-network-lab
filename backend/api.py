@@ -237,7 +237,7 @@ async def memory_capacity_test(payload: MemoryCapacityPayload):
                             AN.update(payload.update_type)
                             
                             curr_A = AN.A if payload.backend == "numpy" else np.array(AN.A)
-                            if np.all(curr_A == Aold):
+                            if np.all(np.sign(curr_A) == np.sign(Aold)):
                                 break
 
                         # Compute accuracy + success with error tolerance

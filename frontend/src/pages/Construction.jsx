@@ -61,8 +61,6 @@ const graphRefs = useRef({});
 // Keeps track of the previous grid mode value for detecting changes
 const prevGridModeRef = useRef(gridMode);
 
-const [captureImage, setCaptureImage] = useState(null);
-
 // The next consts are helper functions for graph operations
 
 // Clears the current graph (nodes + edges) when invoked
@@ -100,7 +98,6 @@ const handleToggleGrid = () => {
   }
 };
 
-  // Extra safety: if gridMode flips from anywhere, clear on entering grid.
   useEffect(() => {
     if (prevGridModeRef.current !== gridMode) {
       if (gridMode) {
@@ -195,10 +192,7 @@ const handleToggleGrid = () => {
         selectedTemplate={selectedTemplate}
         customTemplates={customTemplates}
         onClearGraph={(fn) => (clearGraphFnRef.current = fn)}
-        onGraphRefs={(refs) => {
-          graphRefs.current = refs
-          setCaptureImage(refs.captureImage);
-        }}
+        onGraphRefs={(refs) => (graphRefs.current = refs)}
       />
     </div>
   );
