@@ -882,7 +882,8 @@ function WeightsCanvas({ matrix, size = 500, scaleFactor = 2, cmapName = "blueWh
 }
 
 export default function SimulationPhase() {
-  const { network, graphVersion, captureImage } = useContext(GraphContext);
+  const { network, captureImageRef } = useContext(GraphContext);
+  console.log("SimulationPhase captureImage function:", captureImageRef);
   const {
     WHist,
     memories,
@@ -1389,7 +1390,9 @@ export default function SimulationPhase() {
 
       const parsedMemories = getParsedMemories();
 
-      const graphImage = captureImage ? captureImage() : null;
+      const graphImage = captureImageRef?.current || null;
+      console.log("GraphContext.captureImageRef.current =", captureImageRef.current);
+      console.log("Screenshot at report time:", graphImage);
 
       setExperimentName(finalExperimentName);
       setShowReportModal(false);

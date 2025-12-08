@@ -1,6 +1,6 @@
 // Import necessary libraries and components
 import React, { useState, useRef, useContext, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { GraphContext } from "../GraphContext";
 import GraphCanvas from "../components/GraphCanvas";
 import MenuButton from "../components/MenuButton";
@@ -11,7 +11,7 @@ import { serializeGraph } from "../utils/ioUtils";
 export default function Construction() { // Construction Page Component
 
 // Graph Context & States (True or False)
-
+const navigate = useNavigate();
 const { setNetwork } = useContext(GraphContext); // Used to update the global graph data
 const { commitGraph } = useContext(GraphContext); // Used to finalize or sync graph changes
 
@@ -31,7 +31,7 @@ const [objectType, setObjectType] = useState("node"); // default is single node 
 const [selectedTemplate, setSelectedTemplate] = useState("Hopfield Connectivity"); // default template
 
 // Access and modify custom templates from shared graph context
-const { customTemplates, setCustomTemplates } = useContext(GraphContext);
+const { customTemplates, setCustomTemplates, captureImageRef } = useContext(GraphContext);
 
 // Default probability for connections between nodes.  
 const [connectionProb, setConnectionProb] = useState(100);
@@ -113,7 +113,22 @@ const handleToggleGrid = () => {
   // Commits the current graph state before transitioning to Learning phase
   const handleGoToLearning = () => {
     const graph = graphRefs.current.graphRef?.current;
-    if (graph) commitGraph(serializeGraph(graph));
+    if (graph) {
+      const serialized = serializeGraph(graph);
+      
+      // Capture image right now while canvas is still mounted
+      const graphImage = graphRefs.current.captureImage?.();
+      console.log("Captured image in Construction:", graphImage ? "SUCCESS" : "FAILED");
+      
+      if (graphImage) {
+        console.log("Image preview:", graphImage.substring(0, 100));
+        captureImageRef.current = graphImage;
+      } else {
+        console.error("Failed to capture - canvas might not be ready");
+      }
+      
+      commitGraph(serialized);
+    }
   };
 
   // Main Render for Construction Page
@@ -135,13 +150,29 @@ const handleToggleGrid = () => {
       </button>
 
       {/* Transition to Learning Phase */}
-      <Link
-        to="/learning"
-        onClick={handleGoToLearning}
+      <button
+        onClick={() => {
+          const graph = graphRefs.current.graphRef?.current;
+          if (graph) {
+            const serialized = serializeGraph(graph);
+            
+            // Capture NOW while canvas is visible
+            const graphImage = graphRefs.current.captureImage?.();
+            console.log("Captured image:", graphImage ? graphImage.substring(0, 50) : "NULL");
+            
+            captureImageRef.current = graphImage;
+            commitGraph(serialized);
+            
+            // Use React Router navigation (doesn't reload the page)
+            setTimeout(() => {
+              navigate('/learning');
+            }, 100);
+          }
+        }}
         className="go-to-learning-btn"
       >
         Go to Learning
-      </Link>
+      </button>
 
       {/* Tools Menu */}
       {/* Renders the left-side tools menu with various controls and options */}
@@ -196,8 +227,10 @@ const handleToggleGrid = () => {
         customTemplates={customTemplates}
         onClearGraph={(fn) => (clearGraphFnRef.current = fn)}
         onGraphRefs={(refs) => {
-          graphRefs.current = refs
-          setCaptureImage(refs.captureImage);
+          graphRefs.current = refs;
+          if (!captureImageRef.current || typeof captureImageRef.current === 'function') {
+            captureImageRef.current = refs.captureImage;
+          }
         }}
       />
     </div>

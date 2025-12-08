@@ -443,6 +443,34 @@ export const generateReportPdf = ({
 
     doc.text(`Trials per Data Point: ${trialsPerDataPoint}`, margin, y);
     y += lineHeight * 2;
+
+    // Capacity plot
+    addNewPageIfNeeded(lineHeight * 3);
+    y = drawSectionHeader(doc, "Capacity Plot", margin, y);
+
+    if (capacityResults && capacityResults.length) {
+      const xs = capacityResults.map((r) => r.num_patterns);
+      const ys = capacityResults.map((r) => r.success_count);
+
+      addNewPageIfNeeded(lineHeight * 3);
+      y = drawLinePlotWithAxes(
+        doc,
+        margin,
+        y,
+        pageWidth - margin * 2,
+        200,
+        xs,
+        ys,
+        "Number of Patterns",
+        "Successful Recalls"
+      );
+    } else {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(20);
+      doc.setTextColor(26, 111, 214);
+      doc.text("No capacity test data available.", margin, y);
+      y += lineHeight * 2;
+    }
   } else {
     const steps = AHist && AHist.length ? AHist.length - 1 : 0;
     doc.text(`Number of steps needed to converge: ${steps}`, margin, y);
