@@ -92,3 +92,5 @@ htmlcov/
 
 # Project specific
 backend/.deps_installed
+
+vite.config.js

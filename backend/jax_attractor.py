@@ -28,6 +28,47 @@ def update_step(A, W, rand_indices):
     return A_new
 
 @jit
+def update_step_continuous(A, W, rand_indices, update_gain):
+    def f(A_curr, i):
+        s = jnp.dot(W[i, :], A_curr)
+        new_val = jnp.tanh(update_gain * s)
+        new_val = new_val.astype(A_curr.dtype)
+        A_curr = A_curr.at[i].set(new_val)
+        return A_curr, None
+
+    A_new, _ = lax.scan(f, A, rand_indices)
+    return A_new
+
+@jit
+def update_step_ef(A, W, S, rand_indices, coupling_str):
+    def f(A_curr, i):
+        ef_current = jnp.dot(S[i, :], A_curr)
+        syn_current = jnp.dot(W[i, :], A_curr)
+        scalprod = syn_current + coupling_str * ef_current
+        s = jnp.sign(scalprod)
+        new_val = jnp.where(s == 0, A_curr[i], s)
+        new_val = new_val.astype(A_curr.dtype)
+        A_curr = A_curr.at[i].set(new_val)
+        return A_curr, None
+
+    A_new, _ = lax.scan(f, A, rand_indices)
+    return A_new
+
+@jit
+def update_step_continuous_ef(A, W, S, rand_indices, update_gain, coupling_str):
+    def f(A_curr, i):
+        ef_current = jnp.dot(S[i, :], A_curr)
+        syn_current = jnp.dot(W[i, :], A_curr)
+        s = syn_current + coupling_str * ef_current
+        new_val = jnp.tanh(update_gain * s)
+        new_val = new_val.astype(A_curr.dtype)
+        A_curr = A_curr.at[i].set(new_val)
+        return A_curr, None
+
+    A_new, _ = lax.scan(f, A, rand_indices)
+    return A_new
+
+@jit
 def update_step_granular(A, W, rand_indices):
     def f(A_curr, i):
         in_i = jnp.dot(W[i, :], A_curr)
@@ -87,16 +128,18 @@ def learn_decay_loop(W_init, C, data, mu, scale):
     return final_W
 
 class JaxAttractorNet:
-    def __init__(self, N, C, scale, allow_diag=False, update_gain=1.8):
+    def __init__(self, N, C, scale, allow_diag=False, update_gain=1.8, coupling_str=1.0):
         self.N = N
         self.C = jnp.array(C)
         self.scale = scale
         self.allow_diag = allow_diag
         self.update_gain = update_gain
+        self.coupling_str = coupling_str
         self.mu = 1.0 / N
         self.W = jnp.zeros((N, N))
         self.A = jnp.zeros(N)
         self.E = 0.0
+        self.S = jnp.ones((N, N)) * 0.1 # Default synaptic kernel
         
         if self.allow_diag:
              self.C = self.C.at[jnp.diag_indices(self.N)].set(1)
@@ -143,7 +186,10 @@ class JaxAttractorNet:
         self.E = compute_energy(self.A, self.W)
         
         # get the initial state
-        yield {"t": t, "E": float(self.E), "A": np.array(self.A, dtype=int).tolist()}
+        if 'continuous' in update_type:
+            yield {"t": t, "E": float(self.E), "A": np.array(self.A).tolist()}
+        else:
+            yield {"t": t, "E": float(self.E), "A": np.array(self.A, dtype=int).tolist()}
         
         Aold = self.A
         moretodo = True
@@ -170,18 +216,44 @@ class JaxAttractorNet:
                         E_curr = compute_energy(jnp.array(curr_A), self.W)
                         yield {"t": t, "E": float(E_curr), "A": curr_A.astype(int).tolist()}
             else:
-                self.A = update_step(self.A, self.W, rand_indices)
+                if update_type == 'standard':
+                    self.A = update_step(self.A, self.W, rand_indices)
+                elif update_type == 'continuous':
+                    self.A = update_step_continuous(self.A, self.W, rand_indices, self.update_gain)
+                elif update_type == 'ef':
+                    self.A = update_step_ef(self.A, self.W, self.S, rand_indices, self.coupling_str)
+                elif update_type == 'continuous_ef':
+                    self.A = update_step_continuous_ef(self.A, self.W, self.S, rand_indices, self.update_gain, self.coupling_str)
+                
                 self.E = compute_energy(self.A, self.W)
                 
                 # get the current state
-                yield {"t": t, "E": float(self.E), "A": np.array(self.A, dtype=int).tolist()}
+                if 'continuous' in update_type:
+                    yield {"t": t, "E": float(self.E), "A": np.array(self.A).tolist()}
+                else:
+                    yield {"t": t, "E": float(self.E), "A": np.array(self.A, dtype=int).tolist()}
             
-            if jnp.all(self.A == Aold):
-                moretodo = False
+            # Check convergence
+            if 'continuous' in update_type:
+                # For continuous, check binary convergence
+                A_binary = jnp.sign(self.A) + (self.A == 0)
+                Aold_binary = jnp.sign(Aold) + (Aold == 0)
+                if jnp.all(A_binary == Aold_binary):
+                    moretodo = False
+            else:
+                if jnp.all(self.A == Aold):
+                    moretodo = False
             
             Aold = self.A
             
     def update(self, update_type='standard'):
         key = random.PRNGKey(int(time.time() * 1000))
         rand_indices = random.permutation(key, self.N)
-        self.A = update_step(self.A, self.W, rand_indices)
+        if update_type == 'standard':
+            self.A = update_step(self.A, self.W, rand_indices)
+        elif update_type == 'continuous':
+            self.A = update_step_continuous(self.A, self.W, rand_indices, self.update_gain)
+        elif update_type == 'ef':
+            self.A = update_step_ef(self.A, self.W, self.S, rand_indices, self.coupling_str)
+        elif update_type == 'continuous_ef':
+            self.A = update_step_continuous_ef(self.A, self.W, self.S, rand_indices, self.update_gain, self.coupling_str)

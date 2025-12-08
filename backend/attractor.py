@@ -276,28 +276,51 @@ class attractorNet(object):
         Aold = deepcopy(Ainit)
         moretodo = True
 
-        A_binary = np.sign(self.A) + (self.A == 0)
-        yield {"t": t, "E": float(self.E), "A": A_binary.tolist()}  # Start state
+        if 'continuous' in update_type:
+            yield {"t": t, "E": float(self.E), "A": self.A.tolist()}
+        else:
+            A_binary = np.sign(self.A) + (self.A == 0)
+            yield {"t": t, "E": float(self.E), "A": A_binary.tolist()}  # Start state
 
         while moretodo and t < max_iters:
             t += 1
             
-            if granular and update_type == 'standard':
+            if granular:
                 indices = random.permutation(self.N)
                 changed_any = False
                 
                 for i in indices:
-                    scalprod = dot(self.W[i,:],self.A)
-                    new_val = sgn(scalprod,self.A[i])
+                    old_val = self.A[i]
+                    
+                    if update_type == 'standard':
+                        scalprod = dot(self.W[i,:],self.A)
+                        self.A[i] = sgn(scalprod,self.A[i])
+                    elif update_type == 'continuous':
+                        s = dot(self.W[i,:], self.A)
+                        self.A[i] = math.tanh(self.update_gain*s)
+                    elif update_type == 'ef':
+                        eps = self.coupling_str
+                        ef_current = dot(self.S[i,:], self.A) if self.S is not None else 0
+                        syn_current = dot(self.W[i,:], self.A)
+                        scalprod = syn_current + eps * ef_current
+                        self.A[i] = sgn(scalprod, self.A[i])
+                    elif update_type == 'continuous_ef':
+                        eps = self.coupling_str
+                        ef_current = dot(self.S[i,:], self.A) if self.S is not None else 0
+                        syn_current = dot(self.W[i,:], self.A)
+                        s = syn_current + eps * ef_current
+                        self.A[i] = math.tanh(self.update_gain * s)
                     
                     # check if changed
-                    if new_val != self.A[i]:
-                        self.A[i] = new_val
+                    if self.A[i] != old_val:
                         changed_any = True
                         
                         self.E = self.energy()
-                        A_binary = np.sign(self.A) + (self.A == 0)
-                        yield {"t": t, "E": float(self.E), "A": A_binary.tolist()}
+                        if 'continuous' in update_type:
+                            yield {"t": t, "E": float(self.E), "A": self.A.tolist()}
+                        else:
+                            A_binary = np.sign(self.A) + (self.A == 0)
+                            yield {"t": t, "E": float(self.E), "A": A_binary.tolist()}
                 
                 if not changed_any:
                     moretodo = False
@@ -306,9 +329,13 @@ class attractorNet(object):
                 self.update(update_type)
                 self.E = self.energy()
 
-                A_binary = np.sign(self.A) + (self.A == 0)
-                yield {"t": t, "E": float(self.E), "A": A_binary.tolist()}
+                if 'continuous' in update_type:
+                    yield {"t": t, "E": float(self.E), "A": self.A.tolist()}
+                else:
+                    A_binary = np.sign(self.A) + (self.A == 0)
+                    yield {"t": t, "E": float(self.E), "A": A_binary.tolist()}
 
+                A_binary = np.sign(self.A) + (self.A == 0)
                 if all(A_binary == Aold):
                     moretodo = False
                 Aold = deepcopy(A_binary)
