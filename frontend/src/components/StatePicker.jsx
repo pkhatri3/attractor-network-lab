@@ -12,7 +12,7 @@ import StateImporter from "./StateImporter";
 
 const GAP = 2;
 
-function cellColors({ isPad, on }) {
+function cellColors({ isPad, value }) {
   if (isPad)
     return {
       bg: "rgba(128,128,128,0.25)",
@@ -20,19 +20,27 @@ function cellColors({ isPad, on }) {
       border: "1px solid rgba(255,255,255,0.12)",
       cursor: "default",
     };
-  if (on)
+  
+  if (value > 0) {
+    // Positive values (Blue-ish)
+    const intensity = Math.max(0.3, Math.min(1, Math.abs(value)));
     return {
-      bg: "rgba(26,111,214,0.78)",
+      bg: `rgba(26,111,214,${0.78 * intensity})`,
       fg: "#eaf4ff",
       border: "1px solid rgba(255,255,255,0.20)",
       cursor: "pointer",
     };
-  return {
-    bg: "rgba(255,255,255,0.06)",
-    fg: "#b9c6d2",
-    border: "1px solid rgba(255,255,255,0.12)",
-    cursor: "pointer",
-  };
+  } else {
+    // Negative values (Grey-ish)
+    // For -1, it matches the original "off" state
+    // For values closer to 0, maybe lighter?
+    return {
+      bg: "rgba(255,255,255,0.06)",
+      fg: "#b9c6d2",
+      border: "1px solid rgba(255,255,255,0.12)",
+      cursor: "pointer",
+    };
+  }
 }
 
 export default function StatePicker({
@@ -62,11 +70,15 @@ export default function StatePicker({
       setCurrentState([]);
       return;
     }
-    const cleaned =
-      Array.isArray(initialState) && initialState.length === neuronCount
-        ? initialState.map((v) => (v === 1 ? 1 : -1))
-        : Array(neuronCount).fill(-1);
-    setCurrentState(cleaned);
+    // Only force binary if we are initializing from scratch or a binary-only source
+    // But here we just want to ensure it's an array.
+    // If initialState is provided, use it directly (it might be floats).
+    // If not, default to -1s.
+    if (Array.isArray(initialState) && initialState.length === neuronCount) {
+        setCurrentState(initialState);
+    } else {
+        setCurrentState(Array(neuronCount).fill(-1));
+    }
   }, [neuronCount, initialState, externalState]);
 
   const mask = useMemo(() => {
@@ -204,8 +216,25 @@ export default function StatePicker({
           >
             {Array.from({ length: selected.base }).map((_, idx) => {
               const isReal = mask[idx];
-              const on = isReal ? currentState[idx] === 1 : false;
-              const { bg, fg, border, cursor } = cellColors({ isPad: !isReal, on });
+              const val = isReal ? currentState[idx] : 0;
+              const { bg, fg, border, cursor } = cellColors({ isPad: !isReal, value: val });
+              
+              // Format display value
+              let displayVal = "—";
+              if (isReal) {
+                  if (typeof val === 'number') {
+                      const formatted = val.toFixed(2);
+                      // for a cleaner look, remove .00 for integers
+                      if (formatted.endsWith('.00')) {
+                          displayVal = formatted.slice(0, -3);
+                          if (displayVal === "-0") displayVal = "0";
+                      } else {
+                          displayVal = formatted.replace(/^-0\.00$/, "0.00");
+                      }
+                  } else {
+                      displayVal = String(val);
+                  }
+              }
 
               return (
                 <div
@@ -223,12 +252,12 @@ export default function StatePicker({
                     background: bg,
                     color: fg,
                     border,
-                    fontSize: 12,
+                    fontSize: 10, // Slightly smaller font for decimals
                     cursor: disabled ? "not-allowed" : cursor,
                   }}
-                  title={!isReal ? "Padding" : on ? "+1" : "-1"}
+                  title={!isReal ? "Padding" : String(val)}
                 >
-                  {!isReal ? "—" : on ? "1" : "-1"}
+                  {displayVal}
                 </div>
               );
             })}

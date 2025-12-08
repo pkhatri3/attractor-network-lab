@@ -99,7 +99,7 @@ def learn(payload: LearnPayload):
         return {"ok": False, "error": str(e)}
 
 class SimPayload(BaseModel):
-    A: List[int]
+    A: List[float]
     max_iters: int = 200
     network_id: str
     update_type: str = "standard"
@@ -121,7 +121,7 @@ async def simulate_stream(payload: SimPayload):
         backend = "numpy"
 
     # A from list to numpy array
-    A = np.array(payload.A, dtype=int)
+    A = np.array(payload.A, dtype=float)
 
     # Create a new attractor network instance using cached weights
     positions = None
@@ -237,7 +237,7 @@ async def memory_capacity_test(payload: MemoryCapacityPayload):
                             AN.update(payload.update_type)
                             
                             curr_A = AN.A if payload.backend == "numpy" else np.array(AN.A)
-                            if np.all(curr_A == Aold):
+                            if np.all(np.sign(curr_A) == np.sign(Aold)):
                                 break
 
                         # Compute accuracy + success with error tolerance
