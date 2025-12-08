@@ -217,7 +217,10 @@ export const generateReportPdf = ({
   doc.setFont("helvetica", "bold");
   doc.setFontSize(20);
   doc.setTextColor(26, 111, 214);
-  doc.text("Memory Recall Test Report", margin, y);
+  //doc.text("Memory Recall Test Report", margin, y);
+  const reportTitle =
+    type === "capacity" ? "Memory Capacity Test Report" : "Memory Recall Test Report";
+  doc.text(reportTitle, margin, y);
   doc.setDrawColor(210, 210, 210);
   doc.setLineWidth(0.8);
   doc.line(margin, y + 6, pageWidth - margin, y + 6);
