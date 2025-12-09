@@ -230,7 +230,10 @@ async def memory_capacity_test(payload: MemoryCapacityPayload):
                         noisy[flip_idxs] *= -1
 
                         # Run updates until convergence
-                        AN.A = noisy.copy()
+                        if "continuous" in payload.update_type:
+                            AN.A = noisy.copy().astype(float)
+                        else:
+                            AN.A = noisy.copy()
                         
                         for _ in range(payload.max_iters):
                             # Capture state before update
