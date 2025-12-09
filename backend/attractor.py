@@ -312,7 +312,15 @@ class attractorNet(object):
                         self.A[i] = math.tanh(self.update_gain * s)
                     
                     # check if changed
-                    if self.A[i] != old_val:
+                    if 'continuous' in update_type:
+                        # Check if sign changed (binary state stability)
+                        old_bin = 1 if old_val >= 0 else -1
+                        new_bin = 1 if self.A[i] >= 0 else -1
+                        is_diff = old_bin != new_bin
+                    else:
+                        is_diff = self.A[i] != old_val
+
+                    if is_diff:
                         changed_any = True
                         
                         self.E = self.energy()
