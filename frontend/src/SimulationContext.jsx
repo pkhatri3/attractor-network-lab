@@ -30,6 +30,11 @@ export function SimulationProvider({ children }) {
 
   // reset whenever upstream contexts change
   useEffect(() => {
+    console.log("simulation context reset due to upstream change", {
+      graphVersion,
+      learningRunVersion,
+    });
+
     setAtext("");
     setAvec([]);
     setAHist([]);

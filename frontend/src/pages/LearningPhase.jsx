@@ -12,6 +12,7 @@ import { encodeMatrixToBase64 } from "../utils/ioUtils";
 import { styles } from "../styles/learningPhaseStyles";
 
 
+// Make the API URL available globally 
 window.__API_URL__ = import.meta.env.VITE_API_URL;
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -169,6 +170,7 @@ function computeWeightStats(matrix) {
   };
 }
 
+  // ---- WeightsCanvas component ----
   function WeightsCanvas({
     matrix,
     size = 500,
@@ -268,6 +270,7 @@ function computeWeightStats(matrix) {
         });
       }
 
+      // ---- colormap lookup ----
       const cmap = getColormap(colorMapName);
       const lut = cmap.lut;
       const center = cmap.isDiverging ? cmap.center ?? 0 : null;
@@ -310,6 +313,7 @@ function computeWeightStats(matrix) {
       }
       bctx.putImageData(img, 0, 0);
 
+      // ---- optional light grid for small matrices ----
       const cellW_px = outW / cols;
       const cellH_px = outH / rows;
       if (rows <= 100 && cols <= 100 && cellW_px >= 12 && cellH_px >= 12) {
@@ -332,6 +336,7 @@ function computeWeightStats(matrix) {
         bctx.restore();
       }
 
+      // ---- draw cell numbers if small ----
       const canDrawNumbers = showNumbers && rows <= SHOW_NUMBERS_LIMIT && cols <= SHOW_NUMBERS_LIMIT;
       if (canDrawNumbers) {
         bctx.textAlign = "center";
@@ -376,28 +381,11 @@ function computeWeightStats(matrix) {
     };
 
     return (
-      <div
-        style={{
-          textAlign: "center",
-          width: "100%",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "flex-start",
-          minHeight: 520,
-        }}
-      >
+      <div style={{ textAlign: "center" }}>
         <canvas
           ref={canvasRef}
-          style={{
-            border: "1px solid #444",
-            borderRadius: 8,
-            width: "500px",
-            height: "500px",
-            flexShrink: 0,
-          }}
+          style={{ border: "1px solid #444", borderRadius: 8 }}
         />
-
         <div
           style={{
             marginTop: 10,
@@ -405,12 +393,10 @@ function computeWeightStats(matrix) {
             justifyContent: "center",
             gap: 8,
             flexWrap: "wrap",
-            flexShrink: 0,
           }}
         >
           <button onClick={downloadAsPNG}>Download PNG</button>
           <button onClick={downloadAsJSON}>Download JSON</button>
-
           {matrix &&
             matrix.length <= SHOW_NUMBERS_LIMIT &&
             matrix[0].length <= SHOW_NUMBERS_LIMIT && (
@@ -418,6 +404,7 @@ function computeWeightStats(matrix) {
                 {showNumbers ? "Hide Numbers" : "Show Numbers"}
               </button>
             )}
+
         </div>
       </div>
     );
@@ -529,6 +516,7 @@ function computeWeightStats(matrix) {
           : null,
       };
 
+      console.log("Sending learning payload:", payload);
       setProgress(0);
       setIsLearning(true);
       setLearningStatus("Learning in progress…");
@@ -681,6 +669,7 @@ function computeWeightStats(matrix) {
                     </div>
                   )}
 
+                  {/* NEW: Progress bar */}
                   <div style={{ marginTop: 16, width: "100%" }}>
                     <div
                       style={{
@@ -1092,6 +1081,9 @@ function computeWeightStats(matrix) {
               )}
             </div>
           </div>
+
+
+
 
         {/* Right: Visualization */}
           <div style={styles.panelRight}>
