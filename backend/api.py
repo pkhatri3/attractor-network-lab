@@ -233,15 +233,34 @@ async def memory_capacity_test(payload: MemoryCapacityPayload):
                         AN.A = noisy.copy()
                         
                         for _ in range(payload.max_iters):
-                            Aold = AN.A.copy() if payload.backend == "numpy" else np.array(AN.A)
+                            # Capture state before update
+                            if "continuous" in payload.update_type:
+                                # For continuous, we track the binary state for convergence
+                                raw_old = AN.A if payload.backend == "numpy" else np.array(AN.A)
+                                Aold = np.sign(raw_old) + (raw_old == 0)
+                            else:
+                                Aold = AN.A.copy() if payload.backend == "numpy" else np.array(AN.A)
+
                             AN.update(payload.update_type)
                             
-                            curr_A = AN.A if payload.backend == "numpy" else np.array(AN.A)
+                            # Capture state after update
+                            if "continuous" in payload.update_type:
+                                raw_curr = AN.A if payload.backend == "numpy" else np.array(AN.A)
+                                curr_A = np.sign(raw_curr) + (raw_curr == 0)
+                            else:
+                                curr_A = AN.A if payload.backend == "numpy" else np.array(AN.A)
+
                             if np.all(curr_A == Aold):
                                 break
 
                         # Compute accuracy + success with error tolerance
-                        recalled = AN.A if payload.backend == "numpy" else np.array(AN.A)
+                        raw_recalled = AN.A if payload.backend == "numpy" else np.array(AN.A)
+                        
+                        if "continuous" in payload.update_type:
+                            recalled = np.sign(raw_recalled) + (raw_recalled == 0)
+                        else:
+                            recalled = raw_recalled
+
                         matches = np.sum(recalled == original)
                         accuracy = matches / N if N > 0 else 0
                         # Success if accuracy is at least (1 - error_tolerance)
