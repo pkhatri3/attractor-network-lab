@@ -15,6 +15,20 @@ A comprehensive web-based platform for constructing, training, and simulating Ho
 
 ## Quick Start
 
+### Prerequisites
+
+Before running `./start.sh`, make sure your system has the required Python virtual environment package installed.
+
+### Python Virtual Environment Support
+
+On many Linux and WSL environments, the `python3 -m venv` command will fail silently unless the venv module is installed.  
+Install it with:
+
+```bash
+sudo apt update
+sudo apt install python3-venv
+```
+
 ### Using Startup Scripts (Recommended)
 
 The easiest way to start the application is using the provided startup scripts:
@@ -442,7 +456,6 @@ neural/
 
 ## Additional Resources
 
-- **System Architecture & API Documentation**: See [ARCHITECTURE.md](./ARCHITECTURE.md)
 - **API Interactive Docs**: Available at `http://localhost:8001/docs` when backend is running
 
 
