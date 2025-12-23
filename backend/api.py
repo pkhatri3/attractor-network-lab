@@ -143,6 +143,8 @@ async def simulate_stream(payload: SimPayload):
             # Pass granular flag to both backends
             kwargs = {}
             kwargs['granular'] = payload.granular
+            if payload.update_gain is not None:
+                kwargs['update_gain'] = payload.update_gain
 
             for state in AN.simulate_iter(A, payload.max_iters, update_type=payload.update_type, **kwargs):
                 # Stream timestep, energy, and activations to the frontend

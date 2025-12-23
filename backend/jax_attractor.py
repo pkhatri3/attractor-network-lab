@@ -238,7 +238,7 @@ class JaxAttractorNet:
             # Return list with just the final weight matrix
             return [np.array(self.W)]
 
-    def simulate_iter(self, Ainit, max_iters=101, update_type='standard', granular=False):
+    def simulate_iter(self, Ainit, max_iters=101, update_type='standard', granular=False, update_gain=None):
         self.A = jnp.array(Ainit)
         t = 0
         self.E = compute_energy(self.A, self.W)
@@ -261,10 +261,12 @@ class JaxAttractorNet:
             rand_indices = random.permutation(subkey, self.N)
             
             if granular:
+                gain = self.update_gain if update_gain is None else update_gain
+
                 if update_type == 'standard':
                     self.A, A_stack, changed_stack = update_step_granular(self.A, self.W, rand_indices)
                 elif update_type == 'continuous':
-                    self.A, A_stack, changed_stack = update_step_continuous_granular(self.A, self.W, rand_indices, self.update_gain)
+                    self.A, A_stack, changed_stack = update_step_continuous_granular(self.A, self.W, rand_indices, gain)
                 elif update_type == 'continuous_ef':
                     self.A, A_stack, changed_stack = update_step_continuous_ef_granular(self.A, self.W, self.S, rand_indices, self.update_gain, self.coupling_str)
                 elif update_type == 'ef':
@@ -297,10 +299,12 @@ class JaxAttractorNet:
                         yield {"t": t, "E": float(self.E), "A": np.array(self.A, dtype=int).tolist()}
 
             else:
+                gain = self.update_gain if update_gain is None else update_gain
+
                 if update_type == 'standard':
                     self.A = update_step(self.A, self.W, rand_indices)
                 elif update_type == 'continuous':
-                    self.A = update_step_continuous(self.A, self.W, rand_indices, self.update_gain)
+                    self.A = update_step_continuous(self.A, self.W, rand_indices, gain)
                 elif update_type == 'ef':
                     self.A = update_step_ef(self.A, self.W, self.S, rand_indices, self.coupling_str)
                 elif update_type == 'continuous_ef':
@@ -327,13 +331,14 @@ class JaxAttractorNet:
             
             Aold = self.A
             
-    def update(self, update_type='standard'):
+    def update(self, update_type='standard', update_gain=None):
         key = random.PRNGKey(int(time.time() * 1000))
         rand_indices = random.permutation(key, self.N)
+        gain = self.update_gain if update_gain is None else update_gain
         if update_type == 'standard':
             self.A = update_step(self.A, self.W, rand_indices)
         elif update_type == 'continuous':
-            self.A = update_step_continuous(self.A, self.W, rand_indices, self.update_gain)
+            self.A = update_step_continuous(self.A, self.W, rand_indices, gain)
         elif update_type == 'ef':
             self.A = update_step_ef(self.A, self.W, self.S, rand_indices, self.coupling_str)
         elif update_type == 'continuous_ef':

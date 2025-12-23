@@ -923,6 +923,8 @@ export default function SimulationPhase() {
   const [granularMode, setGranularMode] = useState(true);
   const [experimentName, setExperimentName] = useState("");
   const [activationRule, setActivationRule] = useState("Discrete");
+  const [updateGain, setUpdateGain] = useState(1.8);
+  const [updateGainInput, setUpdateGainInput] = useState("1.8");
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportExperimentInput, setReportExperimentInput] = useState("");
   const [reportFileNameInput, setReportFileNameInput] = useState("");
@@ -1042,6 +1044,7 @@ export default function SimulationPhase() {
         max_iters: 50,
         iterations: capacityIterations,
         update_type: getUpdateType(activationRule),
+        update_gain: activationRule === "Continuous" ? updateGain : undefined,
       };
 
       const res = await fetch(`${API_URL}/memory_capacity_test`, {
@@ -1215,6 +1218,11 @@ export default function SimulationPhase() {
     }
   }, []); // runs only on first mount
 
+  // keep the string input in sync when the numeric value changes
+  useEffect(() => {
+    setUpdateGainInput(updateGain.toString());
+  }, [updateGain]);
+
   // default to the latest memory
   useEffect(() => {
     let parsed = [];
@@ -1256,16 +1264,20 @@ export default function SimulationPhase() {
       const controller = new AbortController();
       abortRef.current = controller;
 
+      const bodyPayload = {
+        A: Avec,
+        network_id: networkId,
+        max_iters: 200,
+        granular: granularMode,
+        update_type: getUpdateType(activationRule),
+      };
+      // include update_gain only for Continuous (not Continuous-EF)
+      if (activationRule === "Continuous") bodyPayload.update_gain = updateGain;
+
       const res = await fetch(`${API_URL}/simulate_stream`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          A: Avec,
-          network_id: networkId,
-          max_iters: 200,
-          granular: granularMode,
-          update_type: getUpdateType(activationRule),
-        }),
+        body: JSON.stringify(bodyPayload),
         signal: controller.signal,
       });
 
@@ -1585,7 +1597,56 @@ export default function SimulationPhase() {
                   Continuous-EF
                 </option>
               </select>
+              
             </div>
+            {activationRule === "Continuous" && (
+              <div style={{ minWidth: 160 }}>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: 13,
+                    marginBottom: 6,
+                    fontWeight: 500,
+                    color: "#eaf4ff",
+                  }}
+                >
+                  Update Gain
+                </label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={updateGainInput}
+                  onChange={(e) => {
+                    setUpdateGainInput(e.target.value);
+                    // Allow intermediate edits; update numeric only when parseable
+                    if (/^-?\d*\.?\d*$/.test(e.target.value)) {
+                      const num = parseFloat(e.target.value);
+                      if (!isNaN(num)) setUpdateGain(num);
+                    }
+                  }}
+                  onBlur={() => {
+                    const num = parseFloat(updateGainInput);
+                    if (!isNaN(num)) {
+                      setUpdateGain(num);
+                      setUpdateGainInput(num.toString());
+                    } else {
+                      setUpdateGainInput(updateGain.toString());
+                    }
+                  }}
+                  disabled={isSimulating || hasRun}
+                  style={{
+                    width: "100%",
+                    padding: 10,
+                    borderRadius: 8,
+                    border: "1px solid rgba(255,255,255,0.18)",
+                    background: "rgba(0,0,0,0.4)",
+                    color: "#eaf4ff",
+                    fontSize: 13,
+                    cursor: isSimulating || hasRun ? "not-allowed" : "pointer",
+                  }}
+                />
+              </div>
+            )}
           </div>
 
           <div

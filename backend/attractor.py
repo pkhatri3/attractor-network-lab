@@ -171,11 +171,12 @@ class attractorNet(object):
             scalprod = dot(self.W[i,:],self.A)  # compute i's input
             self.A[i] = sgn(scalprod,self.A[i]) # assign i's act. value
 
-    def update_continuous(self):
+    def update_continuous(self, update_gain=None):
+        gain = self.update_gain if update_gain is None else update_gain
         indices = random.permutation(self.N)
         for i in indices:
             s = dot(self.W[i,:], self.A)
-            self.A[i] = math.tanh(self.update_gain*s)
+            self.A[i] = math.tanh(gain * s)
 
     def get_synaptic_kernel(self, positions):
         """Compute synaptic kernel matrix from positions"""
@@ -216,11 +217,11 @@ class attractorNet(object):
             s = syn_current + eps * ef_current
             self.A[i] = math.tanh(self.update_gain * s)
 
-    def update(self, update_type='standard'):
+    def update(self, update_type='standard', update_gain=None):
         if update_type == 'standard':
             self.update_standard()
         elif update_type == 'continuous':
-            self.update_continuous()
+            self.update_continuous(update_gain=update_gain)
         elif update_type == 'ef':
             self.update_ef()
         elif update_type == 'continuous_ef':
@@ -268,7 +269,7 @@ class attractorNet(object):
     def energy(self):  # Returns network's energy E
         return -0.5 * dot(self.A,dot(self.W,self.A))
 
-    def simulate_iter(self, Ainit, max_iters=101, update_type='standard', granular=False):
+    def simulate_iter(self, Ainit, max_iters=101, update_type='standard', granular=False, update_gain=None):
         t = 0
         self.A = deepcopy(Ainit)
         self.A = np.array(self.A, dtype=np.float64)
@@ -291,13 +292,15 @@ class attractorNet(object):
                 
                 for i in indices:
                     old_val = self.A[i]
+
+                    gain = self.update_gain if update_gain is None else update_gain
                     
                     if update_type == 'standard':
                         scalprod = dot(self.W[i,:],self.A)
                         self.A[i] = sgn(scalprod,self.A[i])
                     elif update_type == 'continuous':
                         s = dot(self.W[i,:], self.A)
-                        self.A[i] = math.tanh(self.update_gain*s)
+                        self.A[i] = math.tanh(gain * s)
                     elif update_type == 'ef':
                         eps = self.coupling_str
                         ef_current = dot(self.S[i,:], self.A) if self.S is not None else 0
@@ -334,7 +337,7 @@ class attractorNet(object):
                     moretodo = False
                     
             else:
-                self.update(update_type)
+                self.update(update_type, update_gain=update_gain)
                 self.E = self.energy()
 
                 if 'continuous' in update_type:
