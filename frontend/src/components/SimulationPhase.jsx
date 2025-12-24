@@ -44,6 +44,13 @@ const ActivationLayout = ({
     setGranularMode,
     AHistLength,
     onIterationChange,
+    // noisy input props
+    simulationNoiseLevel,
+    setSimulationNoiseLevel,
+    selectedMemoryIndex,
+    setSelectedMemoryIndex,
+    parsedMems,
+    generateNoisyInput,
   }) => (
     <div style={{ width: "100%", paddingTop: "20px", display: "flex", flexDirection: "column", gap: 4, pointerEvents: "auto", zIndex: 1 }}>
       
@@ -243,8 +250,65 @@ const ActivationLayout = ({
                 }
                 style={{ width: "100%" }}
               />
+                </div>
+              )}
+          {/* Noisy input moved here from the right drawer so it's not hidden in the side panel */}
+          {/** Only show when in activation mode (caller ensures this) **/}
+          <div style={{ width: "100%", marginTop: 12 }}>
+            <div style={{
+              background: "rgba(20,20,26,0.92)",
+              borderRadius: 12,
+              padding: 12,
+              border: "1px solid rgba(255,255,255,0.08)",
+              width: "98%",
+            }}>
+              <h3 style={{ marginTop: 0, marginBottom: 8 }}>Generate Noisy Input</h3>
+              <div style={{ background: "rgba(255,255,255,0.04)", padding: 10, borderRadius: 8 }}>
+                <div style={{ fontSize: 13, marginBottom: 6, fontWeight: 600, color: "#eaf4ff" }}>
+                  Noise Level: {(simulationNoiseLevel * 100).toFixed(0)}%
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={0.5}
+                  step={0.01}
+                  value={simulationNoiseLevel}
+                  onChange={(e) => setSimulationNoiseLevel(Number(e.target.value))}
+                  style={{ width: "100%" }}
+                  disabled={isSimulating || hasRun}
+                />
+
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, opacity: 0.6, marginTop: 6 }}>
+                  <span>0%</span>
+                  <span>25%</span>
+                  <span>50%</span>
+                </div>
+
+                <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center" }}>
+                  <select
+                    value={selectedMemoryIndex === null ? "" : selectedMemoryIndex}
+                    onChange={(e) => setSelectedMemoryIndex(e.target.value === "" ? null : Number(e.target.value))}
+                    disabled={isSimulating || hasRun || parsedMems.length === 0}
+                    style={{ flex: 1, padding: 6, borderRadius: 6, background: "transparent", color: "#eaf4ff", border: "1px solid rgba(255,255,255,0.08)" }}
+                  >
+                    {parsedMems.map((m, i) => (
+                      <option key={i} value={i} style={{ background: "#FFF", color: "#000" }}>
+                        Memory #{i + 1}
+                      </option>
+                    ))}
+                  </select>
+
+                  <button
+                    onClick={() => generateNoisyInput()}
+                    disabled={isSimulating || hasRun || neuronCount === 0}
+                    style={{ padding: "8px 12px", borderRadius: 8, border: "none", fontWeight: 600, background: canSimulate && !isSimulating && !hasRun ? "#1a6fd6" : "#555", color: "#fff", cursor: canSimulate && !isSimulating && !hasRun ? "pointer" : "not-allowed" }}
+                  >
+                    Generate
+                  </button>
+                </div>
+              </div>
             </div>
-          )}
+          </div>
       </div>
       
       {/* Energy graph */}
@@ -612,114 +676,7 @@ const CapacityLayout = ({
       )}
     </div>
 
-    {/* Noisy input */}
-    {simulationMode === "activation" && (
-      <div style={panel}>
-        <h3>Generate Noisy Input</h3>
-
-        <div
-          style={{
-            background: "rgba(255,255,255,0.04)",
-            padding: 10,
-            borderRadius: 8,
-            width: "94%",
-          }}
-        >
-          <div
-            style={{
-              fontSize: 13,
-              marginBottom: 6,
-              fontWeight: 600,
-              color: "#eaf4ff",
-            }}
-          >
-            Noise Level: {(simulationNoiseLevel * 100).toFixed(0)}%
-          </div>
-
-          <input
-            type="range"
-            min={0}
-            max={0.5}
-            step={0.01}
-            value={simulationNoiseLevel}
-            onChange={(e) => setSimulationNoiseLevel(Number(e.target.value))}
-            style={{ width: "100%" }}
-            disabled={isSimulating || hasRun}
-          />
-
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              fontSize: 10,
-              opacity: 0.6,
-              marginTop: 6,
-            }}
-          >
-            <span>0%</span>
-            <span>25%</span>
-            <span>50%</span>
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              gap: 8,
-              marginTop: 8,
-              alignItems: "center",
-            }}
-          >
-            <select
-              value={selectedMemoryIndex === null ? "" : selectedMemoryIndex}
-              onChange={(e) =>
-                setSelectedMemoryIndex(
-                  e.target.value === "" ? null : Number(e.target.value)
-                )
-              }
-              disabled={isSimulating || hasRun || parsedMems.length === 0}
-              style={{
-                flex: 1,
-                padding: 6,
-                borderRadius: 6,
-                background: "transparent",
-                color: "#eaf4ff",
-                border: "1px solid rgba(255,255,255,0.08)",
-              }}
-            >
-              {parsedMems.map((m, i) => (
-                <option
-                  key={i}
-                  value={i}
-                  style={{ background: "#FFF", color: "#000" }}
-                >
-                  Memory #{i + 1}
-                </option>
-              ))}
-            </select>
-
-            <button
-              onClick={() => generateNoisyInput()}
-              disabled={isSimulating || hasRun || neuronCount === 0}
-              style={{
-                padding: "8px 12px",
-                borderRadius: 8,
-                border: "none",
-                fontWeight: 600,
-                background:
-                  canSimulate && !isSimulating && !hasRun ? "#1a6fd6" : "#555",
-                color: "#fff",
-                cursor:
-                  canSimulate && !isSimulating && !hasRun
-                    ? "pointer"
-                    : "not-allowed",
-              }}
-            >
-              Generate
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
+    
   </div>
 );
 
@@ -1459,7 +1416,7 @@ export default function SimulationPhase() {
         style={{
           position: "absolute",
           top: 20,
-          right: drawerOpen ? drawerWidth + 50 : 20,
+          right: drawerOpen ? drawerWidth + 220 : 160,
           padding: "10px 12px",
           borderRadius: 12,
           border: "1px solid rgba(255,255,255,0.12)",
@@ -1481,7 +1438,7 @@ export default function SimulationPhase() {
         onClick={() => setDrawerOpen((o) => !o)}
         style={{
           position: "absolute",
-          top: 70,
+          top: 20,
           right: drawerOpen ? drawerWidth + 50 : 20,
           padding: "10px 12px",
           borderRadius: 12,
@@ -1524,12 +1481,12 @@ export default function SimulationPhase() {
               borderRadius: 16,
               padding: 20,
               display: "flex",
-              gap: 20,
-              alignItems: "flex-end",
+              gap: 24,
+              alignItems: "flex-start",
               flexWrap: "wrap",
             }}
           >
-            <div style={{ flex: 1, minWidth: 200 }}>
+            <div style={{ flex: "0 1 50%", minWidth: 200, boxSizing: "border-box" }}>
               <label
                 style={{
                   display: "block",
@@ -1548,7 +1505,10 @@ export default function SimulationPhase() {
                 placeholder="e.g., AryaExperiment1Dec2025"
                 style={{
                   width: "100%",
+                  boxSizing: "border-box",
                   padding: 10,
+                  height: 40,
+                  lineHeight: "20px",
                   borderRadius: 8,
                   border: "1px solid rgba(255,255,255,0.18)",
                   background: "rgba(0,0,0,0.4)",
@@ -1557,7 +1517,7 @@ export default function SimulationPhase() {
                 }}
               />
             </div>
-            <div style={{ flex: 1, minWidth: 200 }}>
+            <div style={{ flex: "0 1 50%", minWidth: 200, boxSizing: "border-box" }}>
               <label
                 style={{
                   display: "block",
@@ -1575,7 +1535,10 @@ export default function SimulationPhase() {
                 disabled={isSimulating || hasRun}
                 style={{
                   width: "100%",
+                  boxSizing: "border-box",
                   padding: 10,
+                  height: 40,
+                  lineHeight: "20px",
                   borderRadius: 8,
                   border: "1px solid rgba(255,255,255,0.18)",
                   background: "rgba(0,0,0,0.4)",
@@ -1636,7 +1599,10 @@ export default function SimulationPhase() {
                   disabled={isSimulating || hasRun}
                   style={{
                     width: "100%",
+                    boxSizing: "border-box",
                     padding: 10,
+                    height: 40,
+                    lineHeight: "20px",
                     borderRadius: 8,
                     border: "1px solid rgba(255,255,255,0.18)",
                     background: "rgba(0,0,0,0.4)",
@@ -1676,6 +1642,12 @@ export default function SimulationPhase() {
             setGranularMode={setGranularMode}
             AHistLength={AHist.length}
             onIterationChange={handleIterationChange}
+            simulationNoiseLevel={simulationNoiseLevel}
+            setSimulationNoiseLevel={setSimulationNoiseLevel}
+            selectedMemoryIndex={selectedMemoryIndex}
+            setSelectedMemoryIndex={setSelectedMemoryIndex}
+            parsedMems={parsedMems}
+            generateNoisyInput={generateNoisyInput}
           />
 
           </div>
@@ -1795,7 +1767,6 @@ export default function SimulationPhase() {
               neuronCount={neuronCount}
               simulationMode={simulationMode}
               canSimulate={canSimulate}
-              generateNoisyInput={generateNoisyInput}
               onWeightsCanvasReady={(canvas) => {
                 weightsCanvasRef.current = canvas;
               }}
