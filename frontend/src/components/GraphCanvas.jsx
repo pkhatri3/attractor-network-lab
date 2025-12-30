@@ -850,7 +850,7 @@ export default function GraphCanvas({
 
             if (ensureConnectedRef.current) ensureNetworkConnected(graph, newIds);
           });
-        } else if (name.includes("Hexagonal")) {
+        } else if (name.includes("Triangular")) {
           const rows = Math.max(1, parseInt(hexRowsRef.current || "4", 10));
           const cols = Math.max(1, parseInt(hexColsRef.current || "6", 10));
           const radius = Math.max(1, parseInt(hexRadiusRef.current || "1", 10));
@@ -1078,7 +1078,7 @@ export default function GraphCanvas({
                 nodeSize: nodeSizeRef.current,
                 nextId,
               });
-            } else if (nameLocal.includes("Hexagonal")) {
+            } else if (nameLocal.includes("Triangular")) {
               const rows = Math.max(1, parseInt(hexRowsRef.current || "4", 10));
               const cols = Math.max(1, parseInt(hexColsRef.current || "6", 10));
               const radius = Math.max(1, parseInt(hexRadiusRef.current || "1", 10));
