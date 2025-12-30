@@ -38,7 +38,7 @@ export function addHexLikeGrid({
         y,
         size: nodeSize,
         color: "#48dbfb",
-        label: `Node ${id}`,
+        label: `Node ${id.split("-")[1]}`,
       });
 
       ids[r][c] = id;
