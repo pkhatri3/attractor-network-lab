@@ -2,6 +2,8 @@
 
 A comprehensive web-based platform for constructing, training, and simulating Hopfield-style attractor neural networks. This application provides an interactive interface for building custom network topologies, learning memory patterns, and testing network capacity and recall performance.
 
+Local version: The limit on network size is roughly around 2000 nodes.
+
 ## Table of Contents
 
 - [Quick Start](#quick-start)
