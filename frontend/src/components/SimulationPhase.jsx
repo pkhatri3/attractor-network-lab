@@ -1200,8 +1200,6 @@ export default function SimulationPhase() {
     const mapping = {
       "Discrete": "standard",
       "Continuous": "continuous",
-      "Discrete-EF": "ef",
-      "Continuous-EF": "continuous_ef",
     };
     return mapping[rule] || "standard";
   };
@@ -1228,7 +1226,7 @@ export default function SimulationPhase() {
         granular: granularMode,
         update_type: getUpdateType(activationRule),
       };
-      // include update_gain only for Continuous (not Continuous-EF)
+      // include update_gain for Continuous mode
       if (activationRule === "Continuous") bodyPayload.update_gain = updateGain;
 
       const res = await fetch(`${API_URL}/simulate_stream`, {
@@ -1552,12 +1550,6 @@ export default function SimulationPhase() {
                 </option>
                 <option value="Continuous" style={{ background: "#000", color: "#fff" }}>
                   Continuous
-                </option>
-                <option value="Discrete-EF" style={{ background: "#000", color: "#fff" }}>
-                  Discrete-EF
-                </option>
-                <option value="Continuous-EF" style={{ background: "#000", color: "#fff" }}>
-                  Continuous-EF
                 </option>
               </select>
               
