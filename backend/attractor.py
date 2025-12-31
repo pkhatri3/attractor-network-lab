@@ -282,7 +282,3 @@ class attractorNet(object):
                 if all(A_binary == Aold):
                     moretodo = False
                 Aold = deepcopy(A_binary)
-    
-if __name__ == '__main__':
-    learning_example()
-    simulation_examples()
