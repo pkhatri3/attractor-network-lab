@@ -308,7 +308,7 @@ For production, set this to your backend server URL.
 
 1. **Set Experiment Details**:
    - Enter an experiment name
-   - Select activation rule (Discrete, Continuous, Discrete-EF, Continuous-EF)
+   - Select activation rule (Discrete, Continuous)
 
 2. **Configure Initial State**:
    - Enter activations as text (JSON array) or use matrix view
