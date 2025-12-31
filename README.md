@@ -138,10 +138,10 @@ The application follows a three-phase workflow: Construction → Learning → Si
 
 ### Learning Phase
 - **Multiple Learning Rules**:
-  - Standard Hebbian
-  - Decay Hebbian
-  - Iterative Hebbian
-  - Store-Erase (with and without decay)
+  - Standard Hebbian (see reference #1)
+  - Decay Hebbian (see reference #2)
+  - Iterative Hebbian (see reference #3)
+  - Store-Erase (see reference #4; with and without decay)
 - **Memory Management**:
   - Import memories from CSV/JSON
   - Generate random memories
@@ -388,10 +388,10 @@ For production, set this to your backend server URL.
 
 ### Learning Rules
 
-- **Standard Hebbian**: Basic one-shot learning
-- **Decay Hebbian**: Includes weight decay over time
-- **Iterative Hebbian**: Iteratively strengthens weak memories
-- **Store-Erase**: Reduces interference between memories
+- **Standard Hebbian**: Basic one-shot learning (see reference #1)
+- **Decay Hebbian**: Includes weight decay over time (see reference #2)
+- **Iterative Hebbian**: Iteratively strengthens weak memories (see reference #3)
+- **Store-Erase**: Reduces interference between memories (see reference #4)
 - **Store-Erase with Decay**: Combines store-erase with decay
 
 ### Activation Rules
@@ -457,6 +457,11 @@ neural/
 
 - **API Interactive Docs**: Available at `http://localhost:8001/docs` when backend is running
 
+## References
+1. Hopfield, J. J. (1982). Neural networks and physical systems with emergent collective computational abilities. Proceedings of the national academy of sciences, 79(8), 2554-2558.
+2. Reggia, J. A., Sylvester, J., Weems, S. A., & Bunting, M. F. (2009). A Simple Oscillatory Short-Term Memory. In AAAI Fall Symposium: Biologically Inspired Cognitive Architectures.
+3. Rodgers, N., Tiňo, P., & Johnson, S. (2022). Network hierarchy and pattern recovery in directed sparse Hopfield networks. Physical Review E, 105(6), 064304.
+4. Katz, G. E., Davis, G. P., Gentili, R. J., & Reggia, J. A. (2019). A programmable neural virtual machine based on a fast store-erase learning rule. Neural Networks, 119, 10-30.
 
 ## Contributors
 Pranav Khatri,
