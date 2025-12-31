@@ -1,4 +1,4 @@
-# Neural Network Attractor Simulation Platform
+# Attractor Neural Network Simulation Platform
 
 A comprehensive web-based platform for constructing, training, and simulating Hopfield-style attractor neural networks. This application provides an interactive interface for building custom network topologies, learning memory patterns, and testing network capacity and recall performance.
 
@@ -124,9 +124,10 @@ The application follows a three-phase workflow: Construction → Learning → Si
 
 ### Construction Phase
 - **Multiple Network Templates**:
-  - Hopfield Connectivity (fully connected)
-  - Rectangular Grid (2D lattice)
-  - Hexagonal Grid (honeycomb lattice with configurable radius)
+  - Hopfield Connectivity: Constructs a fully connected network of $n$ nodes
+  - Rectangular Grid: Constructs a network of nodes arranged on a rectangular grid
+  - Triangular Tessellation: Network of nodes which are arranged as a [triangular tessellation](https://en.wikipedia.org/wiki/Triangular_tiling#)
+    - Can increase the connectivity by controlling the radius $r$ of connections  
 - **Custom Network Import**: Import networks from JSON or CSV files
 - **Interactive Graph Editor**: 
   - Add/delete nodes and edges
@@ -156,8 +157,6 @@ The application follows a three-phase workflow: Construction → Learning → Si
 - **Activation Rules**:
   - **Discrete**: Binary sign function activation
   - **Continuous**: Hyperbolic tangent activation
-  - **Discrete-EF**: Discrete with electric field coupling
-  - **Continuous-EF**: Continuous with electric field coupling
 - **Activation Simulation**:
   - Text or matrix input modes
   - Real-time energy evolution
@@ -256,14 +255,14 @@ For production, set this to your backend server URL.
 ### Phase 1: Construction
 
 1. **Select Template or Create Custom Network**:
-   - Choose from built-in templates (Hopfield, Rectangular, Hexagonal)
+   - Choose from built-in templates (Hopfield, Rectangular, Triangular)
    - Or import a custom network from JSON/CSV
-   - For Hexagonal grids, adjust the radius parameter (1 = immediate neighbors, 2 = two edges away, etc.)
+   - For triangular grids, adjust the radius parameter (1 = immediate neighbors, 2 = two edges away, etc.)
 
 2. **Configure Template Parameters**:
    - **Rows/Columns**: Grid dimensions
    - **Connection Probability**: Percentage chance of edge creation
-   - **Radius** (Hexagonal only): Connectivity radius
+   - **Radius** (Triangular only): Connectivity radius
    - **Force Connectedness**: Ensures all nodes are reachable
 
 3. **Place Networks**:
@@ -399,8 +398,6 @@ For production, set this to your backend server URL.
 
 - **Discrete**: Binary sign function (outputs ±1)
 - **Continuous**: Hyperbolic tangent (outputs continuous values)
-- **Discrete-EF**: Discrete with electric field coupling
-- **Continuous-EF**: Continuous with electric field coupling
 
 ## Troubleshooting
 
