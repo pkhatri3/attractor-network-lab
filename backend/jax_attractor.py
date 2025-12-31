@@ -58,73 +58,6 @@ def update_step_continuous_granular(A, W, rand_indices, update_gain):
     A_final, (A_stack, changed_stack) = lax.scan(f, A, rand_indices)
     return A_final, A_stack, changed_stack
 
-@jit
-def update_step_continuous_ef_granular(A, W, S, rand_indices, update_gain, coupling_str):
-    def f(A_curr, i):
-        ef_current = jnp.dot(S[i, :], A_curr)
-        syn_current = jnp.dot(W[i, :], A_curr)
-        s = syn_current + coupling_str * ef_current
-        new_val = jnp.tanh(update_gain * s)
-        new_val = new_val.astype(A_curr.dtype)
-        
-        # Check for sign change (binary state stability)
-        old_bin = jnp.sign(A_curr[i]) + (A_curr[i] == 0)
-        new_bin = jnp.sign(new_val) + (new_val == 0)
-        
-        changed = old_bin != new_bin
-        
-        A_next = A_curr.at[i].set(new_val)
-        return A_next, (A_next, changed)
-
-    A_final, (A_stack, changed_stack) = lax.scan(f, A, rand_indices)
-    return A_final, A_stack, changed_stack
-
-@jit
-def update_step_ef_granular(A, W, S, rand_indices, coupling_str):
-    def f(A_curr, i):
-        ef_current = jnp.dot(S[i, :], A_curr)
-        syn_current = jnp.dot(W[i, :], A_curr)
-        scalprod = syn_current + coupling_str * ef_current
-        s = jnp.sign(scalprod)
-        new_val = jnp.where(s == 0, A_curr[i], s)
-        new_val = new_val.astype(A_curr.dtype)
-        
-        changed = new_val != A_curr[i]
-        A_next = A_curr.at[i].set(new_val)
-        
-        return A_next, (A_next, changed)
-
-    A_final, (A_stack, changed_stack) = lax.scan(f, A, rand_indices)
-    return A_final, A_stack, changed_stack
-
-@jit
-def update_step_ef(A, W, S, rand_indices, coupling_str):
-    def f(A_curr, i):
-        ef_current = jnp.dot(S[i, :], A_curr)
-        syn_current = jnp.dot(W[i, :], A_curr)
-        scalprod = syn_current + coupling_str * ef_current
-        s = jnp.sign(scalprod)
-        new_val = jnp.where(s == 0, A_curr[i], s)
-        new_val = new_val.astype(A_curr.dtype)
-        A_curr = A_curr.at[i].set(new_val)
-        return A_curr, None
-
-    A_new, _ = lax.scan(f, A, rand_indices)
-    return A_new
-
-@jit
-def update_step_continuous_ef(A, W, S, rand_indices, update_gain, coupling_str):
-    def f(A_curr, i):
-        ef_current = jnp.dot(S[i, :], A_curr)
-        syn_current = jnp.dot(W[i, :], A_curr)
-        s = syn_current + coupling_str * ef_current
-        new_val = jnp.tanh(update_gain * s)
-        new_val = new_val.astype(A_curr.dtype)
-        A_curr = A_curr.at[i].set(new_val)
-        return A_curr, None
-
-    A_new, _ = lax.scan(f, A, rand_indices)
-    return A_new
 
 @jit
 def update_step_granular(A, W, rand_indices):
@@ -267,10 +200,6 @@ class JaxAttractorNet:
                     self.A, A_stack, changed_stack = update_step_granular(self.A, self.W, rand_indices)
                 elif update_type == 'continuous':
                     self.A, A_stack, changed_stack = update_step_continuous_granular(self.A, self.W, rand_indices, gain)
-                elif update_type == 'continuous_ef':
-                    self.A, A_stack, changed_stack = update_step_continuous_ef_granular(self.A, self.W, self.S, rand_indices, self.update_gain, self.coupling_str)
-                elif update_type == 'ef':
-                    self.A, A_stack, changed_stack = update_step_ef_granular(self.A, self.W, self.S, rand_indices, self.coupling_str)
                 else:
                     # Fallback for other types if not implemented granularly yet
                     # Just run standard batch update but treat as one step
@@ -305,11 +234,6 @@ class JaxAttractorNet:
                     self.A = update_step(self.A, self.W, rand_indices)
                 elif update_type == 'continuous':
                     self.A = update_step_continuous(self.A, self.W, rand_indices, gain)
-                elif update_type == 'ef':
-                    self.A = update_step_ef(self.A, self.W, self.S, rand_indices, self.coupling_str)
-                elif update_type == 'continuous_ef':
-                    self.A = update_step_continuous_ef(self.A, self.W, self.S, rand_indices, self.update_gain, self.coupling_str)
-                
                 self.E = compute_energy(self.A, self.W)
                 
                 # get the current state
@@ -339,7 +263,3 @@ class JaxAttractorNet:
             self.A = update_step(self.A, self.W, rand_indices)
         elif update_type == 'continuous':
             self.A = update_step_continuous(self.A, self.W, rand_indices, gain)
-        elif update_type == 'ef':
-            self.A = update_step_ef(self.A, self.W, self.S, rand_indices, self.coupling_str)
-        elif update_type == 'continuous_ef':
-            self.A = update_step_continuous_ef(self.A, self.W, self.S, rand_indices, self.update_gain, self.coupling_str)
