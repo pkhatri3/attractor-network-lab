@@ -46,10 +46,10 @@ const [hopfieldCount, setHopfieldCount] = useState("12");
 const [rectRows, setRectRows] = useState("3");
 const [rectCols, setRectCols] = useState("4");
 
-// Default grid dimensions for hexagonal layout
-const [hexRows, setHexRows] = useState("4");
-const [hexCols, setHexCols] = useState("6");
-const [hexRadius, setHexRadius] = useState("1");
+// Default grid dimensions for triangular layout
+const [triRows, setTriRows] = useState("4");
+const [triCols, setTriCols] = useState("6");
+const [triRadius, setTriRadius] = useState("1");
 
 
 // Stores reference to the graph clearing function (used by Clear All)
@@ -158,12 +158,12 @@ const handleToggleGrid = () => {
         setRectRows={setRectRows}
         rectCols={rectCols}
         setRectCols={setRectCols}
-        hexRows={hexRows}
-        setHexRows={setHexRows}
-        hexCols={hexCols}
-        setHexCols={setHexCols}
-        hexRadius={hexRadius}
-        setHexRadius={setHexRadius}
+        triRows={triRows}
+        setTriRows={setTriRows}
+        triCols={triCols}
+        setTriCols={setTriCols}
+        triRadius={triRadius}
+        setTriRadius={setTriRadius}
         onClearAll={handleClearAll}
         graphRefs={graphRefs}
         setNetwork={setNetwork}
@@ -186,9 +186,9 @@ const handleToggleGrid = () => {
         hopfieldCount={hopfieldCount}
         rectRows={rectRows}
         rectCols={rectCols}
-        hexRows={hexRows}
-        hexCols={hexCols}
-        hexRadius={hexRadius}
+        triRows={triRows}
+        triCols={triCols}
+        triRadius={triRadius}
         objectType={objectType}
         selectedTemplate={selectedTemplate}
         customTemplates={customTemplates}

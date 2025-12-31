@@ -27,12 +27,12 @@ export default function ToolsMenu({
   setRectRows,
   rectCols,
   setRectCols,
-  hexRows,
-  setHexRows,
-  hexCols,
-  setHexCols,
-  hexRadius,
-  setHexRadius,
+  triRows,
+  setTriRows,
+  triCols,
+  setTriCols,
+  triRadius,
+  setTriRadius,
   onClearAll,
   graphRefs,
   objectType,
@@ -389,12 +389,12 @@ export default function ToolsMenu({
             value={
               selectedTemplate === "Rectangular Connectivity"
                 ? rectRows
-                : hexRows
+                : triRows
             }
             onChange={(e) => /* Set rows based on selected template */
               selectedTemplate === "Rectangular Connectivity"
                 ? setRectRows(e.target.value)
-                : setHexRows(e.target.value)
+                : setTriRows(e.target.value)
             }
             className="dynamic-inputs-mar"
           />
@@ -410,12 +410,12 @@ export default function ToolsMenu({
             value={
               selectedTemplate === "Rectangular Connectivity"
                 ? rectCols
-                : hexCols
+                : triCols
             }
             onChange={(e) => /* Set columns based on selected template */
               selectedTemplate === "Rectangular Connectivity"
                 ? setRectCols(e.target.value)
-                : setHexCols(e.target.value)
+                : setTriCols(e.target.value)
             }
             className="dynamic-inputs-mar"
           />
@@ -430,8 +430,8 @@ export default function ToolsMenu({
         <input
           type="number"
           min="1"
-          value={hexRadius}
-          onChange={(e) => setHexRadius(e.target.value)}
+          value={triRadius}
+          onChange={(e) => setTriRadius(e.target.value)}
           className="dynamic-inputs"
         />
       </div>

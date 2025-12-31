@@ -1,6 +1,6 @@
-// Adds a hexagonal (honeycomb) lattice with optional "cap" half-columns
+// Adds a triangular (honeycomb) lattice with optional "cap" half-columns
 // so the outer diagonals reach the two corners.
-export function addHexLikeGrid({
+export function addTriLikeGrid({
   graph,
   cx = 0,
   cy = 0,
@@ -14,7 +14,7 @@ export function addHexLikeGrid({
   radius = 1,
 }) {
   const dx = spacing;                   // horizontal pitch between same-row neighbors
-  const dy = (Math.sqrt(3) / 2) * dx;   // vertical pitch for hex packing
+  const dy = (Math.sqrt(3) / 2) * dx;   // vertical pitch for tri packing
 
   // If caps are enabled, create an extra half-column at both ends
   // so diagonals can “reach” the outer corner nodes.

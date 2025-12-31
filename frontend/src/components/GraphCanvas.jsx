@@ -3,7 +3,7 @@ import Sigma from "sigma";
 import Graph from "graphology";
 import { GraphContext } from "../GraphContext";
 import { addRectangularGrid } from "../pages/rectGrid";
-import { addHexLikeGrid } from "../pages/hexGrid";
+import { addTriLikeGrid } from "../pages/triGrid";
 import { addHopfieldCluster } from "../pages/hopfield";
 import { addGridHopfield } from "../pages/gridHopfield";
 
@@ -272,9 +272,9 @@ export default function GraphCanvas({
   hopfieldCount,
   rectRows,
   rectCols,
-  hexRows,
-  hexCols,
-  hexRadius,
+  triRows,
+  triCols,
+  triRadius,
   onClearGraph,
   onGraphRefs,
   objectType,
@@ -302,9 +302,9 @@ export default function GraphCanvas({
   const hopfieldCountRef = useRef(hopfieldCount);
   const rectRowsRef = useRef(rectRows);
   const rectColsRef = useRef(rectCols);
-  const hexRowsRef = useRef(hexRows);
-  const hexColsRef = useRef(hexCols);
-  const hexRadiusRef = useRef(hexRadius);
+  const triRowsRef = useRef(triRows);
+  const triColsRef = useRef(triCols);
+  const triRadiusRef = useRef(triRadius);
 
   const objectTypeRef = useRef(objectType);
   const selectedTemplateRef = useRef(selectedTemplate);
@@ -324,9 +324,9 @@ export default function GraphCanvas({
   useEffect(() => void (hopfieldCountRef.current = hopfieldCount), [hopfieldCount]);
   useEffect(() => void (rectRowsRef.current = rectRows), [rectRows]);
   useEffect(() => void (rectColsRef.current = rectCols), [rectCols]);
-  useEffect(() => void (hexRowsRef.current = hexRows), [hexRows]);
-  useEffect(() => void (hexColsRef.current = hexCols), [hexCols]);
-  useEffect(() => void (hexRadiusRef.current = hexRadius), [hexRadius]);
+  useEffect(() => void (triRowsRef.current = triRows), [triRows]);
+  useEffect(() => void (triColsRef.current = triCols), [triCols]);
+  useEffect(() => void (triRadiusRef.current = triRadius), [triRadius]);
   useEffect(() => void (objectTypeRef.current = objectType), [objectType]);
   useEffect(() => void (selectedTemplateRef.current = selectedTemplate), [selectedTemplate]);
   useEffect(() => void (customTemplatesRef.current = customTemplates), [customTemplates]);
@@ -851,12 +851,12 @@ export default function GraphCanvas({
             if (ensureConnectedRef.current) ensureNetworkConnected(graph, newIds);
           });
         } else if (name.includes("Triangular")) {
-          const rows = Math.max(1, parseInt(hexRowsRef.current || "4", 10));
-          const cols = Math.max(1, parseInt(hexColsRef.current || "6", 10));
-          const radius = Math.max(1, parseInt(hexRadiusRef.current || "1", 10));
+          const rows = Math.max(1, parseInt(triRowsRef.current || "4", 10));
+          const cols = Math.max(1, parseInt(triColsRef.current || "6", 10));
+          const radius = Math.max(1, parseInt(triRadiusRef.current || "1", 10));
           const before = new Set(graph.nodes());
           withPositionWrites(() => { 
-            addHexLikeGrid({
+            addTriLikeGrid({
               graph,
               cx: p.x,
               cy: p.y,
@@ -1079,10 +1079,10 @@ export default function GraphCanvas({
                 nextId,
               });
             } else if (nameLocal.includes("Triangular")) {
-              const rows = Math.max(1, parseInt(hexRowsRef.current || "4", 10));
-              const cols = Math.max(1, parseInt(hexColsRef.current || "6", 10));
-              const radius = Math.max(1, parseInt(hexRadiusRef.current || "1", 10));
-              addHexLikeGrid({
+              const rows = Math.max(1, parseInt(triRowsRef.current || "4", 10));
+              const cols = Math.max(1, parseInt(triColsRef.current || "6", 10));
+              const radius = Math.max(1, parseInt(triRadiusRef.current || "1", 10));
+              addTriLikeGrid({
                 graph,
                 cx: p.x,
                 cy: p.y,
