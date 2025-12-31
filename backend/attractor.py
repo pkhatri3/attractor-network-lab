@@ -197,35 +197,11 @@ class attractorNet(object):
         S = np.exp(-self.coupling_gain * (S**2))
         return S
 
-    def update_ef(self):
-        """Update with electric field (discrete)"""
-        eps = self.coupling_str
-        indices = random.permutation(self.N)
-        for i in indices:
-            ef_current = dot(self.S[i,:], self.A) if self.S is not None else 0
-            syn_current = dot(self.W[i,:], self.A)
-            scalprod = syn_current + eps * ef_current
-            self.A[i] = sgn(scalprod, self.A[i])
-
-    def update_continuous_ef(self):
-        """Update with electric field (continuous)"""
-        eps = self.coupling_str
-        indices = random.permutation(self.N)
-        for i in indices:
-            ef_current = dot(self.S[i,:], self.A) if self.S is not None else 0
-            syn_current = dot(self.W[i,:], self.A)
-            s = syn_current + eps * ef_current
-            self.A[i] = math.tanh(self.update_gain * s)
-
     def update(self, update_type='standard', update_gain=None):
         if update_type == 'standard':
             self.update_standard()
         elif update_type == 'continuous':
             self.update_continuous(update_gain=update_gain)
-        elif update_type == 'ef':
-            self.update_ef()
-        elif update_type == 'continuous_ef':
-            self.update_continuous_ef()
         else:
             print('invalid update method')
             raise SystemExit(1)
@@ -301,18 +277,6 @@ class attractorNet(object):
                     elif update_type == 'continuous':
                         s = dot(self.W[i,:], self.A)
                         self.A[i] = math.tanh(gain * s)
-                    elif update_type == 'ef':
-                        eps = self.coupling_str
-                        ef_current = dot(self.S[i,:], self.A) if self.S is not None else 0
-                        syn_current = dot(self.W[i,:], self.A)
-                        scalprod = syn_current + eps * ef_current
-                        self.A[i] = sgn(scalprod, self.A[i])
-                    elif update_type == 'continuous_ef':
-                        eps = self.coupling_str
-                        ef_current = dot(self.S[i,:], self.A) if self.S is not None else 0
-                        syn_current = dot(self.W[i,:], self.A)
-                        s = syn_current + eps * ef_current
-                        self.A[i] = math.tanh(self.update_gain * s)
                     
                     # check if changed
                     if 'continuous' in update_type:
