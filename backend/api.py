@@ -105,7 +105,6 @@ class SimPayload(BaseModel):
     update_type: str = "standard"
     update_gain: Optional[float] = None
     granular: bool = False
-    positions: Optional[List[List[float]]] = None  # Optional 2D positions for electric field
 
 @app.post("/simulate_stream")
 async def simulate_stream(payload: SimPayload):
@@ -124,14 +123,10 @@ async def simulate_stream(payload: SimPayload):
     A = np.array(payload.A, dtype=float)
 
     # Create a new attractor network instance using cached weights
-    positions = None
-    if payload.positions:
-        positions = np.array(payload.positions)
-    
     if backend == "jax":
         AN = JaxAttractorNet(len(A), np.ones((len(A), len(A))), 0)
     else:
-        AN = attractorNet(len(A), np.ones((len(A), len(A))), 0, positions=positions)
+        AN = attractorNet(len(A), np.ones((len(A), len(A))), 0)
         
     AN.W = W
     if payload.update_gain is not None:
@@ -180,7 +175,6 @@ class MemoryCapacityPayload(BaseModel):
     iterations: int = 1
     backend: str = "numpy"
     update_type: str = "standard"
-    positions: Optional[List[List[float]]] = None
 
 @app.post("/memory_capacity_test")
 async def memory_capacity_test(payload: MemoryCapacityPayload):
@@ -199,14 +193,10 @@ async def memory_capacity_test(payload: MemoryCapacityPayload):
             for num_patterns in range(1, M + 1):
 
                 # Create a new attractor network and apply learning rule
-                positions = None
-                if payload.positions:
-                    positions = np.array(payload.positions)
-                
                 if payload.backend == "jax":
                     AN = JaxAttractorNet(N, C, payload.scale)
                 else:
-                    AN = attractorNet(N, C, payload.scale, positions=positions)
+                    AN = attractorNet(N, C, payload.scale)
                     
                 if payload.learning_rate is not None:
                     AN.mu = payload.learning_rate

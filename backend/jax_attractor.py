@@ -119,13 +119,12 @@ def learn_decay_loop(W_init, C, data, mu, scale):
     return final_W
 
 class JaxAttractorNet:
-    def __init__(self, N, C, scale, allow_diag=False, update_gain=1.8, coupling_str=1.0):
+    def __init__(self, N, C, scale, allow_diag=False, update_gain=1.8):
         self.N = N
         self.C = jnp.array(C)
         self.scale = scale
         self.allow_diag = allow_diag
         self.update_gain = update_gain
-        self.coupling_str = coupling_str
         self.mu = 1.0 / N
         self.W = jnp.zeros((N, N))
         self.A = jnp.zeros(N)
