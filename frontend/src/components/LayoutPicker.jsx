@@ -62,16 +62,6 @@ export default function LayoutPicker({
   const selected =
     (value && options.find((o) => o.key === value.key)) || options[0] || null;
 
-  // If nothing is valid for this N, bail out with a helpful message.
-  if (!selected) {
-    return (
-      <div style={{ color: "orange", fontSize: 14 }}>
-        No valid layout available for N = {neuronCount}.
-        Try using fewer neurons or importing memories numerically.
-      </div>
-    );
-  }
-
   // currentMem: the memory currently being edited on the main grid.
   const [currentMem, setCurrentMem] = useState([]);
   // memList: all saved memories in this session.
@@ -177,7 +167,7 @@ export default function LayoutPicker({
   // so the grid doesn’t blow past the fixed maxWidth.
   const maxCellSize = 40;
   const maxWidth = 600;
-  const size = Math.min(maxCellSize, Math.floor(maxWidth / selected.cols));
+  const size = Math.min(maxCellSize, Math.floor(maxWidth / (selected?.cols || 1)));
 
   // Save the current pattern into the memory list and notify the parent.
   const addCurrentAsMemory = () => {
@@ -240,6 +230,15 @@ export default function LayoutPicker({
     const next = options.find((o) => o.key === e.target.value) || null;
     onLayoutChange?.(next);
   };
+
+  if (!selected) {
+    return (
+      <div style={{ color: "orange", fontSize: 14 }}>
+        No valid layout available for N = {neuronCount}.
+        Try using fewer neurons or importing memories numerically.
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -522,21 +521,6 @@ export default function LayoutPicker({
     </div>
   );
 }
-
-// Legacy helper: simple "OK/Cancel" clear-all flow using window.confirm.
-// The component now uses a nicer modal instead, but this is kept in case
-// we ever want a non-modal version again.
-const clearAllMemories = () => {
-  if (!memList.length) return;
-  
-  if (!confirm("Clear all saved memories? This cannot be undone.")) return;
-
-  const blank = Array(neuronCount).fill(-1);
-  setMemList([]);
-  setSelectedMemIdx(-1);
-  setCurrentMem(blank);
-  onMemoriesChange?.([], "clear_all");
-};
 
 // Basic button style variants used across the component.
 const btnPrimary = {

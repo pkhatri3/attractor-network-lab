@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Neural Network Attractor Platform - Stop Script
+# Attractor Network Lab - Stop Script
 # This script stops all running backend and frontend servers
 
 # Colors for output
@@ -10,7 +10,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-echo -e "${YELLOW}Stopping Neural Network Attractor Platform servers...${NC}"
+echo -e "${YELLOW}Stopping Attractor Network Lab servers...${NC}"
 
 # Kill backend processes
 BACKEND_PIDS=$(pgrep -f "uvicorn api:app" || true)
@@ -33,4 +33,3 @@ else
 fi
 
 echo -e "${GREEN}All servers stopped${NC}"
-

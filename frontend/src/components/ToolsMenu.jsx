@@ -9,7 +9,6 @@ import {
   downloadText,
   toAdjacencyCSV,
   parseAdjacencyCSV,
-  loadNetworkIntoGraph,
 } from "../utils/ioUtils"; // Import these functions from your utility file
 
 // Define the ToolsMenu component
@@ -101,7 +100,7 @@ export default function ToolsMenu({
     if (!graph) return alert("Graph not ready yet."); // Ensure graph instance is available
     const net = serializeGraph(graph); // Serialize the graph to network format
     let name = saveName.trim() || "network"; // Default name if none provided
-    name = name.replace(/[\/\\:*?"<>|]/g, "_"); 
+    name = name.replace(/[/\\:*?"<>|]/g, "_");
 
     if (saveFormat === "json") { // Handle JSON export
       if (!name.toLowerCase().endsWith(".json")) name += ".json"; 

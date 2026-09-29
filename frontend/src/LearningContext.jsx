@@ -14,13 +14,13 @@ export function LearningProvider({ children }) {
   const [memList, setMemList] = useState([]);
   const [learningRunVersion, setLearningRunVersion] = useState(0);
   const [learningColorScheme, setLearningColorScheme] = useState(
-    () => localStorage.getItem("nme:cmap") || "blueWhiteRed"
+    () => localStorage.getItem("attractor-network-lab:cmap") || "blueWhiteRed"
   );
   const [networkId, setNetworkId] = useState(null);
   const [backend, setBackend] = useState("numpy");
 
   useEffect(() => {
-    localStorage.setItem("nme:cmap", learningColorScheme);
+    localStorage.setItem("attractor-network-lab:cmap", learningColorScheme);
   }, [learningColorScheme]);
 
   const { graphVersion } = useContext(GraphContext);

@@ -1,27 +1,20 @@
 {
-  "name": "frontend",
+  "name": "attractor-network-lab",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "lint": "eslint .",
+    "lint": "eslint . --quiet",
     "preview": "vite preview"
   },
   "dependencies": {
-    "axios": "^1.12.2",
-    "dom-to-image-more": "^3.7.1",
-    "downloadjs": "^1.4.7",
-    "framer-motion": "^12.23.24",
     "graphology": "^0.26.0",
-    "graphology-layout": "^0.6.1",
-    "html-to-image": "^1.11.13",
     "jspdf": "^3.0.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.9.4",
-    "reactflow": "^11.11.4",
     "recharts": "^3.3.0",
     "sigma": "^3.0.2"
   },

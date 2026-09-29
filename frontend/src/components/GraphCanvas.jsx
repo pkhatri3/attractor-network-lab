@@ -93,14 +93,14 @@ function ensureNetworkConnected(graph, nodeIds) {
     if (best.u && best.v) {
       try {
         graph.addEdge(best.u, best.v, { color: "rgba(255,255,255,0.08)" });
-      } catch {}
+      } catch {
+        // The edge may already exist.
+      }
       connected.push(best.j);
       remaining.delete(best.j);
     } else break;
   }
 
-  // refresh for serialization
-  sigma.refresh();
   graph.refreshIndex?.();
 }
 
@@ -185,7 +185,7 @@ function setSnappedNode(graph, id, pos) {
 }
 
 // Snap only nodes that just got added after a batch operation
-function snapNewNodesIfGrid({ graph, sigma, beforeSet, gridMode }) {
+function snapNewNodesIfGrid({ graph, beforeSet, gridMode }) {
   if (!gridMode) return;
   for (const id of graph.nodes()) {
     if (beforeSet.has(id)) continue;
@@ -471,7 +471,9 @@ export default function GraphCanvas({
         try {
           graph.addEdge(src, dst, { color: "rgba(255,255,255,0.08)", templateName: name });
           anyEdge = true;
-        } catch {}
+        } catch {
+          // Ignore duplicate-edge errors while importing a custom network.
+        }
       }
     });
 
@@ -487,7 +489,9 @@ export default function GraphCanvas({
           if (src && dst && src !== dst && Math.random() * 100 < connectionProb) {
             try {
               graph.addEdge(src, dst, { color: "rgba(255,255,255,0.08)", templateName: name });
-            } catch {}
+            } catch {
+              // Ignore duplicate-edge errors while importing a custom network.
+            }
           }
         }
       }
@@ -497,7 +501,6 @@ export default function GraphCanvas({
       try {
         const newIds = Object.values(idxToNew); // all newly added nodes
         ensureNetworkConnected(graph, newIds);
-        sigma.refresh();
       } catch (err) {
         console.warn("Import force connectivity failed:", err);
       }
@@ -800,7 +803,6 @@ export default function GraphCanvas({
               shiftGroupOntoGrid({ graph, ids: newIds });
 
               // ensure connectivity only after nodes exist
-              if (ensureConnectedRef.current) ensureNetworkConnected(graph, newIds);
             });
           } else {
             withPositionWrites(() => {
@@ -822,7 +824,6 @@ export default function GraphCanvas({
               });
 
               // ensure connectivity after all nodes are added
-              if (ensureConnectedRef.current) ensureNetworkConnected(graph, newIds);
             });
           }
         } else if (name.includes("Rectangular")) {
@@ -895,7 +896,6 @@ export default function GraphCanvas({
                 parseFloat(connectionProbRef.current) || 100
               );
 
-              if (ensureConnectedRef.current) ensureNetworkConnected(graph, newIds);
             });
           }
         }
@@ -984,7 +984,9 @@ export default function GraphCanvas({
         if (!src || !dst || src === dst) continue;
         try {
           graph.addEdge(src, dst, { color: "rgba(255,255,255,0.08)" });
-        } catch {}
+        } catch {
+          // Ignore duplicate-edge errors while restoring an imported network.
+        }
       }
     }
 

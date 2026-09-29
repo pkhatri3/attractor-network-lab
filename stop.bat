@@ -1,7 +1,7 @@
 @echo off
-REM Neural Network Attractor Platform - Windows Stop Script
+REM Attractor Network Lab - Windows Stop Script
 
-echo Stopping Neural Network Attractor Platform servers...
+echo Stopping Attractor Network Lab servers...
 
 REM Kill backend processes
 taskkill /F /IM python.exe /FI "WINDOWTITLE eq uvicorn*" >nul 2>&1
@@ -21,4 +21,3 @@ if errorlevel 1 (
 
 echo All servers stopped
 pause
-

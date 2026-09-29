@@ -3,12 +3,6 @@ import { jsPDF } from "jspdf";
 const safeText = (label, value) =>
   `${label}: ${value && value.toString().trim().length ? value : "(not set)"}`;
 
-const chunkArray = (arr, size) => {
-  const out = [];
-  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
-  return out;
-};
-
 const pickMatrixCols = (len) => {
   const root = Math.round(Math.sqrt(len));
   if (

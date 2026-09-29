@@ -1,8 +1,8 @@
 @echo off
-REM Neural Network Attractor Platform - Windows Startup Script
+REM Attractor Network Lab - Windows Startup Script
 
 echo ========================================
-echo Neural Network Attractor Platform
+echo Attractor Network Lab
 echo ========================================
 echo.
 
@@ -51,7 +51,7 @@ taskkill /F /IM python.exe /FI "WINDOWTITLE eq uvicorn*" >nul 2>&1
 
 REM Start backend in background
 echo Starting backend server...
-start "Neural Backend" /MIN cmd /c "uvicorn api:app --reload --host 0.0.0.0 --port 8001"
+start "Attractor Network Lab Backend" /MIN cmd /c "uvicorn api:app --reload --host 0.0.0.0 --port 8001"
 timeout /t 2 /nobreak >nul
 
 echo Backend started at http://localhost:8001
@@ -93,4 +93,3 @@ REM Cleanup on exit
 taskkill /F /IM python.exe /FI "WINDOWTITLE eq uvicorn*" >nul 2>&1
 echo.
 echo Servers stopped
-

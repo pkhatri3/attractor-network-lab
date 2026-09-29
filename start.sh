@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Neural Network Attractor Platform - Startup Script
+# Attractor Network Lab - Startup Script
 # This script starts both the backend and frontend servers
 
 set -e  # Exit on error
@@ -17,7 +17,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR"
 
 echo -e "${BLUE}========================================${NC}"
-echo -e "${BLUE}Neural Network Attractor Platform${NC}"
+echo -e "${BLUE}Attractor Network Lab${NC}"
 echo -e "${BLUE}========================================${NC}"
 echo ""
 
@@ -137,4 +137,3 @@ trap cleanup INT TERM
 
 # Start frontend (this will block)
 npm run dev
-

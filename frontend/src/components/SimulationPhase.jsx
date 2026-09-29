@@ -1500,7 +1500,7 @@ export default function SimulationPhase() {
                 type="text"
                 value={experimentName}
                 onChange={(e) => setExperimentName(e.target.value)}
-                placeholder="e.g., AryaExperiment1Dec2025"
+                placeholder="e.g., Hopfield Recall Experiment"
                 style={{
                   width: "100%",
                   boxSizing: "border-box",

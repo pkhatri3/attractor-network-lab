@@ -97,33 +97,6 @@ export function parseAdjacencyCSV(text) {
   return { N, C, layout };
 }
 
-export function loadNetworkIntoGraph(graph, network, nodeSize = 5) {
-  const { N = 0, C = [], layout = [] } = network || {};
-  graph.clear();
-
-  for (let i = 0; i < N; i++) {
-    const id = `n-${i + 1}`;
-    const pos = layout[i] || { x: i * 60, y: 0 };
-    graph.addNode(id, {
-      x: pos.x,
-      y: pos.y,
-      size: nodeSize,
-      color: "#48dbfb",
-      label: `Node ${i + 1}`,
-    });
-  }
-
-  for (let i = 0; i < N; i++) {
-    for (let j = i + 1; j < N; j++) {
-      if (C[i] && C[i][j] === 1) {
-        const a = `n-${i + 1}`;
-        const b = `n-${j + 1}`;
-        if (!graph.hasEdge(a, b)) graph.addEdge(a, b, { color: "white" });
-      }
-    }
-  }
-}
-
 // 2d adjacency matrix into base64
 export function encodeMatrixToBase64(C) {
   const N = C.length;
@@ -137,21 +110,4 @@ export function encodeMatrixToBase64(C) {
   let binary = "";
   for (let b of bytes) binary += String.fromCharCode(b);
   return btoa(binary);
-}
-
-// decode base64 back into 2d matrix
-// currently not used but wrote it in case we need to send something from backend to frontend
-export function decodeBase64ToMatrix(b64, N) {
-  const binary = atob(b64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  const C = Array.from({ length: N }, () => Array(N).fill(0));
-  let bitIndex = 0;
-  for (let i = 0; i < N; i++) {
-    for (let j = 0; j < N; j++, bitIndex++) {
-      const byte = bytes[bitIndex >> 3];
-      C[i][j] = (byte >> (bitIndex & 7)) & 1;
-    }
-  }
-  return C;
 }

@@ -2,12 +2,12 @@
 
 # Default target
 help:
-	@echo "Neural Network Attractor Platform - Makefile"
+	@echo "Attractor Network Lab - Makefile"
 	@echo ""
 	@echo "Available commands:"
 	@echo "  make install          - Install all dependencies (backend + frontend)"
 	@echo "  make install-backend - Install backend dependencies only"
-	@echo "  make install-frontend- Install frontend dependencies only"
+	@echo "  make install-frontend  Install frontend dependencies only"
 	@echo "  make start            - Start both backend and frontend servers"
 	@echo "  make start-backend    - Start backend server only"
 	@echo "  make start-frontend  - Start frontend server only"
@@ -84,4 +84,3 @@ logs:
 	else \
 		echo "No backend.log file found. Backend may not be running."; \
 	fi
-
