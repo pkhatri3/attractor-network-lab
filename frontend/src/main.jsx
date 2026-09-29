@@ -6,9 +6,11 @@ import { GraphProvider } from "./GraphContext.jsx";
 import { LearningProvider } from "./LearningContext.jsx";
 import { SimulationProvider } from "./SimulationContext.jsx";
 import { BrowserRouter as Router } from "react-router-dom";
+import AppErrorBoundary from "./components/AppErrorBoundary.jsx";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
+    <AppErrorBoundary>
       <GraphProvider>
         <LearningProvider>
           <SimulationProvider>
@@ -18,5 +20,6 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           </SimulationProvider>
         </LearningProvider>
       </GraphProvider>
+    </AppErrorBoundary>
   </React.StrictMode>
 );

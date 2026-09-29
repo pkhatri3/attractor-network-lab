@@ -7,7 +7,154 @@
     <title>Attractor Network Lab</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <main class="initial-loading-screen" aria-label="Loading Attractor Network Lab">
+        <img
+          src="/university-of-maryland.webp"
+          alt="University of Maryland"
+        />
+        <h1>Attractor Network Lab</h1>
+        <p class="initial-loading-affiliation">University of Maryland - SEAM Lab</p>
+
+        <div class="initial-loading-progress" aria-hidden="true">
+          <span></span>
+        </div>
+        <p class="initial-loading-status">Preparing Backend...</p>
+
+        <div class="initial-loading-details">
+          <section>
+            <h2>Contributors</h2>
+            <p class="initial-loading-contributor-line">
+              Pranav Khatri, Ryan DeCamp, Vihaan Motwani, Abdullatif Elmuaqaat,
+              Shaun Fernandes
+            </p>
+          </section>
+          <section>
+            <h2>Credits to</h2>
+            <p class="initial-loading-credit-line">
+              Arya Teymourlouei, James Purtilo
+            </p>
+          </section>
+        </div>
+      </main>
+    </div>
+    <style>
+      .initial-loading-screen {
+        display: grid;
+        min-height: 100vh;
+        place-items: center;
+        align-content: center;
+        gap: 28px;
+        box-sizing: border-box;
+        padding: 24px;
+        background: #ffffff;
+        color: #1f2937;
+        text-align: center;
+      }
+
+      .initial-loading-screen img {
+        width: min(34vw, 156px);
+        height: auto;
+      }
+
+      .initial-loading-screen h1 {
+        margin: 0;
+        font: 700 clamp(1.35rem, 4vw, 1.8rem) system-ui, sans-serif;
+        letter-spacing: -0.025em;
+      }
+
+      .initial-loading-affiliation {
+        margin: 8px 0 28px;
+        color: #4b5563;
+        font: 500 1rem system-ui, sans-serif;
+      }
+
+      .initial-loading-details {
+        width: min(92vw, 680px);
+        margin-top: 96px;
+      }
+
+      .initial-loading-details section {
+        padding: 0;
+      }
+
+      .initial-loading-details section:first-child {
+        text-align: left;
+      }
+
+      .initial-loading-details section:last-child {
+        margin-top: 24px;
+        text-align: left;
+      }
+
+      .initial-loading-details h2 {
+        margin: 0 0 8px;
+        color: #6b7280;
+        font: 700 0.72rem system-ui, sans-serif;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .initial-loading-contributor-line,
+      .initial-loading-credit-line {
+        margin: 0;
+        color: #374151;
+        font: 0.9rem/1.55 system-ui, sans-serif;
+      }
+
+      .initial-loading-contributor-line,
+      .initial-loading-credit-line {
+        white-space: nowrap;
+      }
+
+      .initial-loading-progress {
+        width: min(76vw, 280px);
+        height: 6px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: #e5e7eb;
+      }
+
+      .initial-loading-progress span {
+        display: block;
+        width: 45%;
+        height: 100%;
+        border-radius: inherit;
+        background: #cc0000;
+        animation: initial-loading-progress 1.4s ease-in-out infinite;
+      }
+
+      .initial-loading-status {
+        margin: 12px 0 0;
+        color: #6b7280;
+        font: 500 0.85rem system-ui, sans-serif;
+      }
+
+      @keyframes initial-loading-progress {
+        from { transform: translateX(-100%); }
+        to { transform: translateX(322%); }
+      }
+
+      @media (max-width: 600px) {
+        .initial-loading-details {
+          width: min(92vw, 420px);
+        }
+
+        .initial-loading-details section:first-child,
+        .initial-loading-details section:last-child {
+          text-align: center;
+        }
+
+        .initial-loading-details section:last-child {
+          margin-top: 18px;
+        }
+
+        .initial-loading-contributor-line,
+        .initial-loading-credit-line {
+          white-space: normal;
+        }
+      }
+    </style>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
