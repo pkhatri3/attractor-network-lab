@@ -8,6 +8,12 @@ The application guides an experiment through three stages:
 2. **Learning** — store memories using configurable Hebbian learning rules.
 3. **Simulation** — test recall, inspect energy and activation dynamics, and measure memory capacity.
 
+## Demo
+
+Demo: [https://youtu.be/YmuU0GYFRfA?si=rj6QvLgIaJKjNVya](https://youtu.be/YmuU0GYFRfA?si=rj6QvLgIaJKjNVya)
+
+![Attractor Network Lab screenshot](frontend/public/attractor-network-lab.png)
+
 ## Features
 
 - Build networks with Hopfield, rectangular-grid, and triangular-grid templates.
