@@ -12,6 +12,8 @@ The application guides an experiment through three stages:
 
 Demo: [https://youtu.be/YmuU0GYFRfA?si=rj6QvLgIaJKjNVya](https://youtu.be/YmuU0GYFRfA?si=rj6QvLgIaJKjNVya)
 
+Website: [https://attractor-network-lab.vercel.app/](https://attractor-network-lab.vercel.app/)
+
 ![Attractor Network Lab screenshot](frontend/public/attractor-network-lab.png)
 
 ## Features
